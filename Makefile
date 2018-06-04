@@ -124,6 +124,7 @@ ELC_SRCS := \
 	tm.c \
 	unl.c \
 	vim.c \
+	wat.c \
 	ws.c \
 	x86.c \
 
@@ -458,6 +459,10 @@ RUNNER := tools/runhs.sh
 TOOL := ghc
 include target.mk
 $(OUT.eir.hs.out): tools/runhs.sh
+
+TARGET := wat
+RUNNER := nodejs
+include target.mk
 
 test: $(TEST_RESULTS)
 
