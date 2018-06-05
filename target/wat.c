@@ -165,7 +165,6 @@ static void wat_emit_inst(Inst* inst) {
   case JGT:
   case JLE:
   case JGE:
-  case JMP:
     if (inst->src.type == REG) {
       emit_line("(if (i32.%s (get_global $%s) (get_global $%s))",
                  wat_cmp_str(inst), reg_names[inst->dst.reg], src_str(inst));
@@ -190,6 +189,16 @@ static void wat_emit_inst(Inst* inst) {
       emit_line(")");
       dec_indent();
       emit_line(")");
+    }
+    break;
+
+  case JMP:
+    if (inst->jmp.type == REG) {
+      emit_line("(set_global $pc (i32.sub (get_global $%s) (i32.const 1)))",
+                 value_str(&inst->jmp));
+    } else {
+      emit_line("(set_global $pc (i32.sub (i32.const %d) (i32.const 1)))",
+                 inst->jmp);
     }
     break;
 
