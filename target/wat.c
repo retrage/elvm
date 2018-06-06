@@ -253,7 +253,7 @@ void target_wat(Module* module) {
   emit_line("let buf = '';");
   emit_line("function getchar() {");
   emit_line(" if (input === '')");
-  emit_line("  input = input + readlineSync.question() + '\n';");
+  emit_line("  input = input + readlineSync.question() + '\\n';");
   emit_line(" const result = input.charCodeAt(0);");
   emit_line(" input = input.substring(1);");
   emit_line(" return result;");
