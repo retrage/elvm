@@ -2,6 +2,7 @@
 #include <target/util.h>
 
 static void wat_init_state(void) {
+  emit_line("const wast = `");
   emit_line("(module");
   inc_indent();
   emit_line("(func $getchar (import \"imports\" \"getchar\") (result i32))");
@@ -243,4 +244,36 @@ void target_wat(Module* module) {
   emit_line("return 1;");
   dec_indent();
   emit_line("}");
+  dec_indent();
+  emit_line("`;");
+  emit_line("");
+  emit_line("const wast2wasm = require('wast2wasm');");
+  emit_line("const readlineSync = require('readline-sync');");
+  emit_line("");
+  emit_line("let buf = '';");
+  emit_line("function getchar() {");
+  emit_line(" if (input === '')");
+  emit_line("  input = input + readlineSync.question() + '\n';");
+  emit_line(" const result = input.charCodeAt(0);");
+  emit_line(" input = input.substring(1);");
+  emit_line(" return result;");
+  emit_line("}");
+  emit_line("function putchar(c) {");
+  emit_line(" console.log(String.fromCharCode(c & 255));");
+  emit_line("}");
+  emit_line("function main() {");
+  emit_line(" wast2wasm(wast, true).then(wasm => {");
+  emit_line("  const buffer = wasm.buffer;");
+  emit_line("  WebAssembly.instantiate(buffer, {");
+  emit_line("   imports: {");
+  emit_line("    getchar,");
+  emit_line("    putchar,");
+  emit_line("   },");
+  emit_line("  }).then(instance => {");
+  emit_line("   const result = instance.instance.exports.main();");
+  emit_line("  });");
+  emit_line(" });");
+  emit_line("}");
+  emit_line("");
+  emit_line("main();");
 }
