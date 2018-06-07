@@ -7,6 +7,7 @@ static void wat_init_state(void) {
   inc_indent();
   emit_line("(func $getchar (import \"imports\" \"getchar\") (result i32))");
   emit_line("(func $putchar (import \"imports\" \"putchar\") (param i32))");
+  emit_line("(func $exit (import \"imports\" \"exit\") (param i32))");
 
   for (int i = 0; i < 7; i++) {
     emit_line("(global $%s (mut i32) (i32.const 0))", reg_names[i]);
@@ -137,7 +138,7 @@ static void wat_emit_inst(Inst* inst) {
 
   case EXIT:
     /* TODO: Fix */
-    emit_line("exit(0);");
+    emit_line("(i32.const 0) (call $exit)");
     break;
 
   case DUMP:
@@ -261,6 +262,9 @@ void target_wat(Module* module) {
   emit_line("function putchar(c) {");
   emit_line(" console.log(String.fromCharCode(c & 255));");
   emit_line("}");
+  emit_line("function exit(status) {");
+  emit_line(" process.exit(status);");
+  emit_line("}");
   emit_line("function main() {");
   emit_line(" wast2wasm(wast, true).then(wasm => {");
   emit_line("  const buffer = wasm.buffer;");
@@ -268,6 +272,7 @@ void target_wat(Module* module) {
   emit_line("   imports: {");
   emit_line("    getchar,");
   emit_line("    putchar,");
+  emit_line("    exit,");
   emit_line("   },");
   emit_line("  }).then(instance => {");
   emit_line("   const result = instance.instance.exports.main();");
