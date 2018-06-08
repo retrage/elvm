@@ -260,7 +260,7 @@ void target_wat(Module* module) {
   emit_line(" return result;");
   emit_line("}");
   emit_line("function putchar(c) {");
-  emit_line(" console.log(String.fromCharCode(c & 255));");
+  emit_line(" process.stdout.write(String.fromCharCode(c & 255));");
   emit_line("}");
   emit_line("function exit(status) {");
   emit_line(" process.exit(status);");
