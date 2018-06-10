@@ -20,13 +20,14 @@ static void wat_emit_func_prologue(int func_id) {
   emit_line("(func $func%d", func_id);
   inc_indent();
 
-  /* TODO: Rewrite */
-  emit_line("while (%d <= pc && pc < %d) {",
+  emit_line("(loop");
+  inc_indent();
+  emit_line("(br_if 1 (i32.eq (i32.and (i32.lt_u (i32.const %d) (get_global $pc)) (i32.ge_u (get_global $pc) (i32.const %d))) (i32.const 1)))",
             func_id * CHUNKED_FUNC_SIZE, (func_id + 1) * CHUNKED_FUNC_SIZE);
-  inc_indent();
-  emit_line("switch (pc) {");
-  emit_line("case -1:  /* dummy */");
-  inc_indent();
+  for (int i = 0; i < CHUNKED_FUNC_SIZE; i++) {
+    emit_line("(block");
+    //inc_indent();
+  }
 }
 
 static void wat_emit_func_epilogue(void) {
@@ -137,7 +138,6 @@ static void wat_emit_inst(Inst* inst) {
     break;
 
   case EXIT:
-    /* TODO: Fix */
     emit_line("(i32.const 0) (call $exit)");
     break;
 
@@ -213,10 +213,10 @@ void target_wat(Module* module) {
   wat_init_state();
 
   int num_funcs = emit_chunked_main_loop(module->text,
-                                         wat_emit_func_prologue,
-                                         wat_emit_func_epilogue,
-                                         wat_emit_pc_change,
-                                         wat_emit_inst);
+                                            wat_emit_func_prologue,
+                                            wat_emit_func_epilogue,
+                                            wat_emit_pc_change,
+                                            wat_emit_inst);
 
   emit_line("(func (export \"main\")");
   inc_indent();
@@ -228,23 +228,25 @@ void target_wat(Module* module) {
     }
   }
 
-  /* TODO: Rewrite */
   emit_line("");
-  emit_line("while (1) {");
+  emit_line("(loop");
   inc_indent();
-  emit_line("switch (pc / %d | 0) {", CHUNKED_FUNC_SIZE);
+  emit_line("(i32.div_u (get_global $pc) (i32.const %d))", CHUNKED_FUNC_SIZE);
+  emit_line("(br_table");
+  inc_indent();
   for (int i = 0; i < num_funcs; i++) {
-    emit_line("case %d:", i);
-    emit_line(" func%d();", i);
-    emit_line(" break;");
+    emit_line("%d", i);
   }
-  emit_line("}");
+  emit_line("$default");
   dec_indent();
-  emit_line("}");
+  emit_line(")");
+  emit_line("(br 0)");
+  dec_indent();
+  emit_line(")");
 
-  emit_line("return 1;");
+  emit_line("(i32.const 1) (call $exit)");
   dec_indent();
-  emit_line("}");
+  emit_line(")");
   dec_indent();
   emit_line("`;");
   emit_line("");
