@@ -181,7 +181,7 @@ static void wat_emit_inst(Inst* inst) {
       inc_indent();
       emit_line("(then");
       inc_indent();
-      emit_line("(set_global $pc (i32.sub (get_global $%s) (i32.const 1))",
+      emit_line("(set_global $pc (i32.sub (get_global $%s) (i32.const 1)))",
                  value_str(&inst->jmp));
       dec_indent();
       emit_line(")");
@@ -193,7 +193,7 @@ static void wat_emit_inst(Inst* inst) {
       inc_indent();
       emit_line("(then");
       inc_indent();
-      emit_line("(set_global $pc (i32.sub (i32.const %s) (i32.const 1))",
+      emit_line("(set_global $pc (i32.sub (i32.const %s) (i32.const 1)))",
                  value_str(&inst->jmp));
       dec_indent();
       emit_line(")");
