@@ -13,6 +13,7 @@ static void wat_init_state(void) {
     emit_line("(global $%s (mut i32) (i32.const 0))", reg_names[i]);
   }
   emit_line("(memory $mem 256)");
+  emit_line("(func $dummy (unreachable))");
 }
 
 static void wat_emit_func_prologue(int func_id) {
@@ -209,6 +210,28 @@ static void wat_emit_inst(Inst* inst) {
   }
 }
 
+static void wat_emit_funcs_br_table(int depth, int num_funcs) {
+  emit_line("(block");
+  inc_indent();
+  if (depth < num_funcs) {
+    wat_emit_funcs_br_table(depth+1, num_funcs);
+  } else {
+    emit_line("(i32.div_u (get_global $pc) (i32.const %d))",
+                                            CHUNKED_FUNC_SIZE);
+    emit_line("(br_table");
+    inc_indent();
+    for (int i = 0; i < num_funcs+1; i++) {
+      emit_line("%d", i);
+    }
+    dec_indent();
+    emit_line(")");
+  }
+  emit_line("(call $func%d)", num_funcs-depth-1);
+  emit_line("(br %d)", depth+1);
+  dec_indent();
+  emit_line(")");
+}
+
 void target_wat(Module* module) {
   wat_init_state();
 
@@ -219,6 +242,7 @@ void target_wat(Module* module) {
                                             wat_emit_inst);
 
   emit_line("(func (export \"main\")");
+  inc_indent();
   inc_indent();
 
   Data* data = module->data;
@@ -231,19 +255,16 @@ void target_wat(Module* module) {
   emit_line("");
   emit_line("(loop");
   inc_indent();
-  emit_line("(i32.div_u (get_global $pc) (i32.const %d))", CHUNKED_FUNC_SIZE);
-  emit_line("(br_table");
+  emit_line("(br_if 1 (i32.eq (i32.and (i32.lt_u (i32.const 0) (get_global $pc)) (i32.ge_u (get_global $pc) (i32.const 5))) (i32.const 1)))");
+  emit_line("(block");
   inc_indent();
-  for (int i = 0; i < num_funcs; i++) {
-    emit_line("%d", i);
-  }
-  emit_line("$default");
-  dec_indent();
-  emit_line(")");
+  wat_emit_funcs_br_table(0, num_funcs);
+  emit_line("(call $dummy)");
   emit_line("(br 0)");
   dec_indent();
   emit_line(")");
-
+  dec_indent();
+  emit_line(")");
   emit_line("(i32.const 1) (call $exit)");
   dec_indent();
   emit_line(")");
