@@ -207,8 +207,8 @@ static void wat_emit_inst(Inst* inst) {
       emit_line("(set_global $pc (i32.sub (get_global $%s) (i32.const 1)))",
                  value_str(&inst->jmp));
     } else {
-      emit_line("(set_global $pc (i32.sub (i32.const %d) (i32.const 1)))",
-                 inst->jmp);
+      emit_line("(set_global $pc (i32.sub (i32.const %s) (i32.const 1)))",
+                 value_str(&inst->jmp));
     }
     break;
 
