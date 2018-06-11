@@ -28,8 +28,8 @@ static void wat_emit_func_prologue(int func_id) {
             func_id * CHUNKED_FUNC_SIZE, (func_id + 1) * CHUNKED_FUNC_SIZE);
   for (int i = 0; i < CHUNKED_FUNC_SIZE + 1; i++) {
     emit_line("(block");
+    inc_indent();
   }
-  inc_indent();
   emit_line("(get_global $pc)");
   emit_line("(br_table");
   inc_indent();
@@ -41,13 +41,12 @@ static void wat_emit_func_prologue(int func_id) {
 }
 
 static void wat_emit_func_epilogue(int pc, int func_id) {
-  for (; pc < (func_id + 1) * CHUNKED_FUNC_SIZE + 1; pc++) {
+  for (; pc < (func_id + 1) * CHUNKED_FUNC_SIZE; pc++) {
     emit_line("(call $dummy)");
-    emit_line("(br %d)", (func_id + 1) * CHUNKED_FUNC_SIZE - pc);
+    emit_line("(br %d)", (func_id + 1) * CHUNKED_FUNC_SIZE - pc - 1);
+    dec_indent();
     emit_line(")");
   }
-  dec_indent();
-  emit_line(")");
   emit_line("(set_global $pc (i32.add (get_global $pc) (i32.const 1)))");
   emit_line("(br 0)");
   dec_indent();
@@ -246,7 +245,8 @@ static int wat_emit_chunked_main_loop(Inst* inst,
 
     emit_inst(inst);
     if (!inst->next) {
-      emit_func_epilogue(inst->pc, func_id);
+      emit_pc_change(inst->pc - 1, func_id);
+      emit_func_epilogue(inst->pc - 1, func_id);
     }
   }
   return prev_func_id + 1;
