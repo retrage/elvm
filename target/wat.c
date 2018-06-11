@@ -33,12 +33,12 @@ static void wat_emit_func_prologue(int func_id) {
 }
 
 static void wat_emit_func_epilogue(void) {
-  dec_indent();
-  emit_line(")");
-  dec_indent();
-  emit_line(")");
   emit_line("(set_global $pc (i32.add (get_global $pc) (i32.const 1)))");
-  emit_line("(br 0)");
+  emit_line("(br 2)");
+  dec_indent();
+  emit_line(")");
+  dec_indent();
+  emit_line(")");
   dec_indent();
   emit_line(")");
   dec_indent();
@@ -46,6 +46,8 @@ static void wat_emit_func_epilogue(void) {
 }
 
 static void wat_emit_pc_change(int pc) {
+  emit_line("(set_global $pc (i32.add (get_global $pc) (i32.const 1)))");
+  emit_line("(br 2)");
   dec_indent();
   emit_line(")");
   dec_indent();
