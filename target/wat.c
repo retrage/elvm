@@ -26,27 +26,17 @@ static void wat_emit_func_prologue(int func_id) {
   inc_indent();
   emit_line("(br_if 1 (i32.eq (i32.and (i32.lt_u (i32.const %d) (get_global $pc)) (i32.ge_u (get_global $pc) (i32.const %d))) (i32.const 1)))",
             func_id * CHUNKED_FUNC_SIZE, (func_id + 1) * CHUNKED_FUNC_SIZE);
-  for (int i = 0; i < CHUNKED_FUNC_SIZE + 1; i++) {
-    emit_line("(block");
-    inc_indent();
-  }
-  emit_line("(get_global $pc)");
-  emit_line("(br_table");
+  emit_line("(if (i32.eq (get_global $pc) (i32.const -1))");
   inc_indent();
-  for (int i = 0; i < CHUNKED_FUNC_SIZE + 1; i++) {
-    emit_line("%d", i);
-  }
-  dec_indent();
-  emit_line(")");
+  emit_line("(then");
+  inc_indent();
 }
 
-static void wat_emit_func_epilogue(int pc, int func_id) {
-  for (; pc < (func_id + 1) * CHUNKED_FUNC_SIZE; pc++) {
-    emit_line("(call $dummy)");
-    emit_line("(br %d)", (func_id + 1) * CHUNKED_FUNC_SIZE - pc - 1);
-    dec_indent();
-    emit_line(")");
-  }
+static void wat_emit_func_epilogue(void) {
+  dec_indent();
+  emit_line(")");
+  dec_indent();
+  emit_line(")");
   emit_line("(set_global $pc (i32.add (get_global $pc) (i32.const 1)))");
   emit_line("(br 0)");
   dec_indent();
@@ -55,10 +45,15 @@ static void wat_emit_func_epilogue(int pc, int func_id) {
   emit_line(")");
 }
 
-static void wat_emit_pc_change(int pc, int func_id) {
-  emit_line("(br %d)", (func_id + 1) * CHUNKED_FUNC_SIZE - pc + 1);
+static void wat_emit_pc_change(int pc) {
   dec_indent();
   emit_line(")");
+  dec_indent();
+  emit_line(")");
+  emit_line("(if (i32.eq (get_global $pc) (i32.const %d))", pc);
+  inc_indent();
+  emit_line("(then");
+  inc_indent();
 }
 
 static char* wat_cmp_str(Inst* inst) {
@@ -221,70 +216,16 @@ static void wat_emit_inst(Inst* inst) {
   }
 }
 
-static int wat_emit_chunked_main_loop(Inst* inst,
-                            void (*emit_func_prologue)(int func_id),
-                            void (*emit_func_epilogue)(int pc, int func_id),
-                            void (*emit_pc_change)(int pc, int func_id),
-                            void (*emit_inst)(Inst* inst)) {
-  int prev_pc = -1;
-  int prev_func_id = -1;
-  for (; inst; inst = inst->next) {
-    int func_id = inst->pc / CHUNKED_FUNC_SIZE;
-    if (prev_pc != inst->pc) {
-      if (prev_func_id != func_id) {
-        if (prev_func_id != -1) {
-          emit_pc_change(inst->pc, func_id - 1);
-          emit_func_epilogue(inst->pc, func_id - 1);
-        }
-        emit_func_prologue(func_id);
-      }
-      emit_pc_change(inst->pc, func_id);
-    }
-    prev_pc = inst->pc;
-    prev_func_id = func_id;
-
-    emit_inst(inst);
-    if (!inst->next) {
-      emit_pc_change(inst->pc - 1, func_id);
-      emit_func_epilogue(inst->pc - 1, func_id);
-    }
-  }
-  return prev_func_id + 1;
-}
-
-static void wat_emit_funcs_br_table(int depth, int num_funcs) {
-  emit_line("(block");
-  inc_indent();
-  if (depth < num_funcs) {
-    wat_emit_funcs_br_table(depth+1, num_funcs);
-  } else {
-    emit_line("(i32.div_u (get_global $pc) (i32.const %d))",
-                                            CHUNKED_FUNC_SIZE);
-    emit_line("(br_table");
-    inc_indent();
-    for (int i = 0; i < num_funcs+1; i++) {
-      emit_line("%d", i);
-    }
-    dec_indent();
-    emit_line(")");
-  }
-  emit_line("(call $func%d)", num_funcs-depth-1);
-  emit_line("(br %d)", depth+1);
-  dec_indent();
-  emit_line(")");
-}
-
 void target_wat(Module* module) {
   wat_init_state();
 
-  int num_funcs = wat_emit_chunked_main_loop(module->text,
+  int num_funcs = emit_chunked_main_loop(module->text,
                                             wat_emit_func_prologue,
                                             wat_emit_func_epilogue,
                                             wat_emit_pc_change,
                                             wat_emit_inst);
 
   emit_line("(func (export \"main\")");
-  inc_indent();
   inc_indent();
 
   Data* data = module->data;
@@ -294,20 +235,23 @@ void target_wat(Module* module) {
     }
   }
 
-  emit_line("");
   emit_line("(loop");
   inc_indent();
-  emit_line("(br_if 1 (i32.eq (i32.and (i32.lt_u (i32.const 0) (get_global $pc)) (i32.ge_u (get_global $pc) (i32.const 5))) (i32.const 1)))");
-  emit_line("(block");
-  inc_indent();
-  wat_emit_funcs_br_table(0, num_funcs);
-  emit_line("(call $dummy)");
+
+  for (int i = 0; i < num_funcs; i++) {
+    emit_line("(if (i32.eq (i32.div_u (get_global $pc) (i32.const %d)) (i32.const %d))", CHUNKED_FUNC_SIZE, i);
+    inc_indent();
+    emit_line("(then (call $func%d))", i);
+    dec_indent();
+    emit_line(")");
+  }
+
   emit_line("(br 0)");
   dec_indent();
   emit_line(")");
+  emit_line("(i32.const 1) (call $exit)");
   dec_indent();
   emit_line(")");
-  emit_line("(i32.const 1) (call $exit)");
   dec_indent();
   emit_line(")");
   dec_indent();
@@ -316,7 +260,7 @@ void target_wat(Module* module) {
   emit_line("const wast2wasm = require('wast2wasm');");
   emit_line("const readlineSync = require('readline-sync');");
   emit_line("");
-  emit_line("let buf = '';");
+  emit_line("let input = '';");
   emit_line("function getchar() {");
   emit_line(" if (input === '')");
   emit_line("  input = input + readlineSync.question() + '\\n';");
