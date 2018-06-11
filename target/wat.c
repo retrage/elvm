@@ -13,7 +13,6 @@ static void wat_init_state(void) {
     emit_line("(global $%s (mut i32) (i32.const 0))", reg_names[i]);
   }
   emit_line("(memory $mem 256)");
-  emit_line("(func $dummy (unreachable))");
 }
 
 
