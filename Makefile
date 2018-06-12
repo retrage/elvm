@@ -95,6 +95,7 @@ ELC_SRCS := \
 	py.c \
 	ps.c \
 	rb.c \
+	rs.c \
 	sed.c \
 	sh.c \
 	sqlite3.c \
@@ -407,6 +408,11 @@ include target.mk
 TARGET := ps
 RUNNER := gsnd -q -dBATCH --
 include target.mk
+
+TARGET := rs
+RUNNER := tools/runrs.sh
+include target.mk
+$(OUT.eir.rs.out): tools/runrs.sh
 
 test: $(TEST_RESULTS)
 
