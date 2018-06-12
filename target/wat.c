@@ -12,7 +12,7 @@ static void wat_init_state(void) {
   for (int i = 0; i < 7; i++) {
     emit_line("(global $%s (mut i32) (i32.const 0))", reg_names[i]);
   }
-  emit_line("(memory $mem 256)");
+  emit_line("(memory $mem 32767 32767)");
 }
 
 
@@ -115,10 +115,10 @@ static void wat_emit_inst(Inst* inst) {
 
   case LOAD:
     if (inst->src.type == REG) {
-      emit_line("(set_global $%s (i32.load8_s (get_global $%s)))",
+      emit_line("(set_global $%s (i32.load8_u (get_global $%s)))",
                  reg_names[inst->dst.reg], src_str(inst));
     } else {
-      emit_line("(set_global $%s (i32.load8_s (i32.const %s)))",
+      emit_line("(set_global $%s (i32.load8_u (i32.const %s)))",
                  reg_names[inst->dst.reg], src_str(inst));
     }
     break;
