@@ -57,7 +57,21 @@ static void wat_emit_pc_change(int pc) {
   inc_indent();
 }
 
-static char* wat_cmp_str(Inst* inst) {
+static const char* wat_value_str(Value* v) {
+  if (v->type == REG) {
+    return format("(get_global $%s)", reg_names[v->reg]);
+  } else if (v->type == IMM) {
+    return format("(i32.const %d)", v->imm);
+  } else {
+    error("invalid value");
+  }
+}
+
+static const char* wat_src_str(Inst* inst) {
+  return wat_value_str(&inst->src);
+}
+
+static const char* wat_cmp_str(Inst* inst) {
   int op = normalize_cond(inst->op, 0);
   switch (op) {
     case JEQ:
@@ -80,65 +94,34 @@ static char* wat_cmp_str(Inst* inst) {
 static void wat_emit_inst(Inst* inst) {
   switch (inst->op) {
   case MOV:
-    if (inst->src.type == REG) {
-      emit_line("(set_global $%s (get_global $%s))",
-                 reg_names[inst->dst.reg], src_str(inst));
-    } else {
-      emit_line("(set_global $%s (i32.const %s))",
-                 reg_names[inst->dst.reg], src_str(inst));
-    }
+    emit_line("(set_global $%s %s)",
+            reg_names[inst->dst.reg], wat_src_str(inst));
     break;
 
   case ADD:
-    if (inst->src.type == REG) {
-      emit_line("(set_global $%s (i32.add (get_global $%s) (get_global $%s)))",
-                 reg_names[inst->dst.reg],
-		 reg_names[inst->dst.reg], src_str(inst));
-    } else {
-      emit_line("(set_global $%s (i32.add (get_global $%s) (i32.const %s)))",
-                 reg_names[inst->dst.reg],
-		 reg_names[inst->dst.reg], src_str(inst));
-    }
+    emit_line("(set_global $%s (i32.add (get_global $%s) %s))",
+            reg_names[inst->dst.reg],
+            reg_names[inst->dst.reg], wat_src_str(inst));
     break;
 
   case SUB:
-    if (inst->src.type == REG) {
-      emit_line("(set_global $%s (i32.sub (get_global $%s) (get_global $%s)))",
-                 reg_names[inst->dst.reg],
-		 reg_names[inst->dst.reg], src_str(inst));
-    } else {
-      emit_line("(set_global $%s (i32.sub (get_global $%s) (i32.const %s)))",
-                 reg_names[inst->dst.reg],
-		 reg_names[inst->dst.reg], src_str(inst));
-    }
+    emit_line("(set_global $%s (i32.sub (get_global $%s) %s))",
+            reg_names[inst->dst.reg],
+            reg_names[inst->dst.reg], wat_src_str(inst));
     break;
 
   case LOAD:
-    if (inst->src.type == REG) {
-      emit_line("(set_global $%s (i32.load8_u (get_global $%s)))",
-                 reg_names[inst->dst.reg], src_str(inst));
-    } else {
-      emit_line("(set_global $%s (i32.load8_u (i32.const %s)))",
-                 reg_names[inst->dst.reg], src_str(inst));
-    }
+    emit_line("(set_global $%s (i32.load (i32.mul %s (i32.const 4))))",
+            reg_names[inst->dst.reg], wat_src_str(inst));
     break;
 
   case STORE:
-    if (inst->src.type == REG) {
-      emit_line("(i32.store8 (get_global $%s) (get_global $%s))",
-                 src_str(inst), reg_names[inst->dst.reg]);
-    } else {
-      emit_line("(i32.store8 (i32.const %s) (get_global $%s))",
-                 src_str(inst), reg_names[inst->dst.reg]);
-    }
+    emit_line("(i32.store (i32.mul %s (i32.const 4)) (get_global $%s))",
+            wat_src_str(inst), reg_names[inst->dst.reg]);
     break;
 
   case PUTC:
-    if (inst->src.type == REG) {
-      emit_line("(get_global $%s) (call $putchar)", src_str(inst));
-    } else {
-      emit_line("(i32.const %s) (call $putchar)", src_str(inst));
-    }
+    emit_line("%s (call $putchar)", wat_src_str(inst));
     break;
 
   case GETC:
@@ -158,15 +141,9 @@ static void wat_emit_inst(Inst* inst) {
   case GT:
   case LE:
   case GE:
-    if (inst->src.type == REG) {
-      emit_line("(set_global $%s (i32.%s (get_global $%s) (get_global $%s)))",
-                 reg_names[inst->dst.reg], wat_cmp_str(inst),
-		 reg_names[inst->dst.reg], src_str(inst));
-    } else {
-      emit_line("(set_global $%s (i32.%s (get_global $%s) (i32.const %s)))",
-                 reg_names[inst->dst.reg], wat_cmp_str(inst),
-		 reg_names[inst->dst.reg], src_str(inst));
-    }
+    emit_line("(set_global $%s (i32.%s (get_global $%s) $%s))",
+            reg_names[inst->dst.reg], wat_cmp_str(inst),
+	    reg_names[inst->dst.reg], wat_src_str(inst));
     break;
 
   case JEQ:
@@ -175,41 +152,22 @@ static void wat_emit_inst(Inst* inst) {
   case JGT:
   case JLE:
   case JGE:
-    if (inst->src.type == REG) {
-      emit_line("(if (i32.%s (get_global $%s) (get_global $%s))",
-                 wat_cmp_str(inst), reg_names[inst->dst.reg], src_str(inst));
-      inc_indent();
-      emit_line("(then");
-      inc_indent();
-      emit_line("(set_global $pc (i32.sub (get_global $%s) (i32.const 1)))",
-                 value_str(&inst->jmp));
-      dec_indent();
-      emit_line(")");
-      dec_indent();
-      emit_line(")");
-    } else {
-      emit_line("(if (i32.%s (get_global $%s) (i32.const %s))",
-                 wat_cmp_str(inst), reg_names[inst->dst.reg], src_str(inst));
-      inc_indent();
-      emit_line("(then");
-      inc_indent();
-      emit_line("(set_global $pc (i32.sub (i32.const %s) (i32.const 1)))",
-                 value_str(&inst->jmp));
-      dec_indent();
-      emit_line(")");
-      dec_indent();
-      emit_line(")");
-    }
+    emit_line("(if (i32.%s (get_global $%s) %s)",
+            wat_cmp_str(inst), reg_names[inst->dst.reg], wat_src_str(inst));
+    inc_indent();
+    emit_line("(then");
+    inc_indent();
+    emit_line("(set_global $pc (i32.sub (get_global $%s) (i32.const 1)))",
+                 wat_value_str(&inst->jmp));
+    dec_indent();
+    emit_line(")");
+    dec_indent();
+    emit_line(")");
     break;
 
   case JMP:
-    if (inst->jmp.type == REG) {
-      emit_line("(set_global $pc (i32.sub (get_global $%s) (i32.const 1)))",
-                 value_str(&inst->jmp));
-    } else {
-      emit_line("(set_global $pc (i32.sub (i32.const %s) (i32.const 1)))",
-                 value_str(&inst->jmp));
-    }
+    emit_line("(set_global $pc (i32.sub %s (i32.const 1)))",
+            wat_value_str(&inst->jmp));
     break;
 
   default:
