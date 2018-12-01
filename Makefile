@@ -96,6 +96,7 @@ ELC_SRCS := \
 	cpp_template.c \
 	cr.c \
 	cs.c \
+	ebc.c \
 	el.c \
 	forth.c \
 	fs.c \
@@ -468,6 +469,11 @@ $(OUT.eir.hs.out): tools/runhs.sh
 
 TARGET := oct
 RUNNER := octave -q
+include target.mk
+
+TARGET := ebc
+RUNNER := tools/runebc.sh
+TOOL := ebcvm
 include target.mk
 
 test: $(TEST_RESULTS)
