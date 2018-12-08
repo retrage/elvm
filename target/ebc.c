@@ -434,12 +434,8 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case EQ:
-      if (inst->src.type == REG) {
-        emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
       emit_2(0x82, 0x04); // JMP8cc .L1
       emit_ebc_mov_imm(inst->dst.reg, 0x01);
       emit_2(0x02, 0x04); // JMP8 .L2
@@ -448,13 +444,9 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case NE:
-      if (inst->src.type == REG) {
-        emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
-      emit_2(0xc2, 0x04); // JMP8cc .L1
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
+      emit_2(0xc2, 0x04); // JMP8cs .L1
       emit_ebc_mov_imm(inst->dst.reg, 0x01);
       emit_2(0x02, 0x04); // JMP8 .L2
       emit_ebc_mov_imm(inst->dst.reg, 0x00);
@@ -472,12 +464,8 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_ebc_mov_imm(R7, 0xffffff);
       // AND32 inst->dst.reg, R7
       emit_2(0x14, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
-      if (inst->src.type == REG) {
-        emit_2(0x08, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x08, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x08, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
       emit_2(0x82, 0x04); // JMP8cc .L1
       emit_ebc_mov_imm(inst->dst.reg, 0x01);
@@ -491,18 +479,14 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH inst->dst.reg
       // MOVdd R7, 0x01
       emit_ebc_mov_imm(R7, 0x01);
-      // ADD32 inst->dst.reg, R7
-      emit_2(0x0c, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
+      // SUB32 inst->dst.reg, R7
+      emit_2(0x0d, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       // MOVIdd R7, 0xffffff
       emit_ebc_mov_imm(R7, 0xffffff);
       // AND32 inst->dst.reg, R7
       emit_2(0x14, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
-      if (inst->src.type == REG) {
-        emit_2(0x09, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x09, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x09, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
       emit_2(0x82, 0x04); // JMP8cc .L1
       emit_ebc_mov_imm(inst->dst.reg, 0x01);
@@ -512,12 +496,8 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case LE:
-      if (inst->src.type == REG) {
-        emit_2(0x08, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x08, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x08, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_2(0x82, 0x04); // JMP8cc .L1
       emit_ebc_mov_imm(inst->dst.reg, 0x01);
       emit_2(0x02, 0x04); // JMP8 .L2
@@ -526,12 +506,8 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case GE:
-      if (inst->src.type == REG) {
-        emit_2(0x09, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x09, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x09, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_2(0x82, 0x04); // JMP8cc .L1
       emit_ebc_mov_imm(inst->dst.reg, 0x01);
       emit_2(0x02, 0x04); // JMP8 .L2
@@ -569,12 +545,12 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case JGT:
-      // dst > src; dst + 1 >= src
+      // dst > src; dst - 1 >= src
       emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH inst->dst.reg
       // MOVdd R7, 0x01
       emit_ebc_mov_imm(R7, 0x01);
-      // ADD32 inst->dst.reg, R7
-      emit_2(0x0c, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
+      // SUB32 inst->dst.reg, R7
+      emit_2(0x0d, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       // MOVIdd R7, 0xffffff
       emit_ebc_mov_imm(R7, 0xffffff);
       // AND32 inst->dst.reg, R7
