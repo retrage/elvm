@@ -540,22 +540,14 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case JEQ:
-      if (inst->src.type == REG) {
-        emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x05, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_ebc_jmp(inst, 0xc0, pc2addr); // JMPcs addr
       break;
 
     case JNE:
-      if (inst->src.type == REG) {
-        emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x05, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x05, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_ebc_jmp(inst, 0x80, pc2addr); // JMPcc addr
       break;
 
@@ -570,12 +562,8 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_ebc_mov_imm(R7, 0xffffff);
       // AND32 inst->dst.reg, R7
       emit_2(0x14, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
-      if (inst->src.type == REG) {
-        emit_2(0x08, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x08, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x08, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
       emit_ebc_jmp(inst, 0xc0, pc2addr); // JMPcs addr
       break;
@@ -591,33 +579,21 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_ebc_mov_imm(R7, 0xffffff);
       // AND32 inst->dst.reg, R7
       emit_2(0x14, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
-      if (inst->src.type == REG) {
-        emit_2(0x09, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x09, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x09, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
       emit_ebc_jmp(inst, 0xc0, pc2addr); // JMPcs addr
       break;
 
     case JLE:
-      if (inst->src.type == REG) {
-        emit_2(0x08, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x08, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x08, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_ebc_jmp(inst, 0xc0, pc2addr); // JMPcs addr
       break;
 
     case JGE:
-      if (inst->src.type == REG) {
-        emit_2(0x09, (EBCREG[inst->dst.reg] << 4) + EBCREG[inst->src.reg]);
-      } else {
-        emit_ebc_mov_imm(R7, inst->src.imm);
-        emit_2(0x09, (EBCREG[inst->dst.reg] << 4) + EBCREG[R7]);
-      }
+      emit_ebc_mov(R7, &inst->src);
+      emit_2(0x09, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       emit_ebc_jmp(inst, 0xc0, pc2addr); // JMPcs addr
       break;
 
