@@ -361,20 +361,16 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       // MOVREL R7, mem
       emit_2(0xb9, EBCREG[R7]);
       emit_le32(mem_addr - (text_vaddr + emit_cnt() + 4));
-      if (inst->src.type == REG) {
-        emit_2(0x6b, EBCREG[R1]); // PUSH R1
-        emit_2(0x6b, EBCREG[R2]); // PUSH R2
-        emit_ebc_mov_reg(R1, inst->src.reg); // MOVdd R1, inst->src.reg
-        emit_ebc_mov_imm(R2, 0x08); // MOVIdd R2, 0x08
-        emit_2(0x4e, (EBCREG[R2] << 4) + EBCREG[R1]); // MUL64 R1, R2
-        emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
-        emit_2(0x6c, EBCREG[R2]); // POP R2
-        emit_2(0x6c, EBCREG[R1]); // POP R1
-        // MOVdd inst->dst.reg, @R7
-        emit_2(0x23, 0x80 + (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
-      } else {
-        emit_ebc_mov_imm(EBCREG[inst->dst.reg], inst->src.imm);
-      }
+      emit_2(0x6b, EBCREG[R1]); // PUSH R1
+      emit_2(0x6b, EBCREG[R2]); // PUSH R2
+      emit_ebc_mov(R1, &inst->src);
+      emit_ebc_mov_imm(R2, 0x04); // MOVIdd R2, 0x04
+      emit_2(0x4e, (EBCREG[R2] << 4) + EBCREG[R1]); // MUL64 R1, R2
+      emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
+      emit_2(0x6c, EBCREG[R2]); // POP R2
+      emit_2(0x6c, EBCREG[R1]); // POP R1
+      // MOVdd inst->dst.reg, @R7
+      emit_2(0x23, 0x80 + (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
       break;
 
     case STORE:
@@ -383,20 +379,14 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_le32(mem_addr - (text_vaddr + emit_cnt() + 4));
       emit_2(0x6b, EBCREG[R1]); // PUSH R1
       emit_2(0x6b, EBCREG[R2]); // PUSH R2
-      emit_ebc_mov_reg(R1, inst->src.reg); // MOVdd R1, inst->src.reg
-      emit_ebc_mov_imm(R2, 0x08); // MOVIdd R2, 0x08
+      emit_ebc_mov(R1, &inst->src);
+      emit_ebc_mov_imm(R2, 0x04); // MOVIdd R2, 0x04
       emit_2(0x4e, (EBCREG[R2] << 4) + EBCREG[R1]); // MUL64 R1, R2
       emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
-      if (inst->src.type == REG) {
-        // MOVdd @R7, inst->dst.reg
-        emit_2(0x23, (EBCREG[inst->dst.reg] << 4) + 0x08 + EBCREG[R7]);
-      } else {
-        // MOVIdd @R7, inst->dst.imm
-        emit_2(0xb7, 0x28 + EBCREG[R7]);
-        emit_le32(inst->dst.imm);
-      }
       emit_2(0x6c, EBCREG[R2]); // POP R2
       emit_2(0x6c, EBCREG[R1]); // POP R1
+      // MOVdd @R7, inst->dst.reg
+      emit_2(0x23, (EBCREG[inst->dst.reg] << 4) + 0x08 + EBCREG[R7]);
       break;
 
     case PUTC:
