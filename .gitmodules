@@ -7,6 +7,3 @@
 [submodule "tinycc"]
 	path = tinycc
 	url = http://repo.or.cz/tinycc.git
-[submodule "ebcvm"]
-	path = ebcvm
-	url = https://github.com/yabits/ebcvm
