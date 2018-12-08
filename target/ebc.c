@@ -412,7 +412,7 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_2(0x77, 0x50 + 0x08 + EBCREG[R2]);
       emit_2(0x02, 0x10);
       emit_2(0x00, 0x00);
-      emit_4(0x60, 0x07, 0x18, 0x00); // FIXME: MOVqw R7, R0 (0, +24)
+      emit_4(0x60, 0x07, 0x18, 0x00); // MOVqw R7, R0 (0, +24)
       emit_4(0x72, 0xf1, 0x41, 0x10); // MOVn R1, @R7(.SystemTable)
       emit_4(0x72, 0x91, 0x85, 0x21); // MOVn R1, @R1(.ConOut)
       emit_2(0x35, 0x02); // PUSHn R2
@@ -424,19 +424,19 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case GETC:
-      emit_2(0x28, (EBCREG[R0] << 4) + EBCREG[R7]); // MOV R7, R0
       emit_2(0x6b, EBCREG[R1]); // PUSH R1
       emit_2(0x6b, EBCREG[R2]); // PUSH R2
       // MOVREL R2, Key
       emit_2(0xb9, EBCREG[R2]);
       emit_le32(key_addr - (text_vaddr + emit_cnt() + 6));
+      emit_4(0x60, 0x07, 0x18, 0x00); // MOVqw R7, R0 (0, +24)
       emit_4(0x72, 0xf1, 0x41, 0x10); // MOVn R1, @R7(.SystemTable)
       emit_4(0x72, 0x91, 0x63, 0x10); // MOVn R1, @R1(.ConIn)
       emit_2(0x35, 0x02); // PUSHn R2
       emit_2(0x35, 0x01); // PUSHn R1
       emit_6(0x83, 0x29, 0x01, 0x00, 0x00, 0x10); // CALLEX @R1(.ReadKeyStroke)
       emit_4(0x60, 0x00, 0x02, 0x10); // MOV R0, R0(+2, 0)
-      emit_4(0x60, 0xa7, 0x02, 0x10); // MOV R7, @R2(+2, 0)
+      emit_4(0x60, 0xa7, 0x04, 0x00); // MOV R7, @R2(0, +2)
       // FIXME: CMPI32weq R7, EOF ; if (R7 == EOF)
       // FIXME: JMP8cs .L1 ; { goto L1 }
       // FIXME: .L0:
