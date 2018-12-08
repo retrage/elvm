@@ -360,7 +360,7 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
     case LOAD:
       // MOVREL R7, mem
       emit_2(0xb9, EBCREG[R7]);
-      emit_le32(mem_addr - (text_vaddr + emit_cnt() + 6));
+      emit_le32(mem_addr - (text_vaddr + emit_cnt() + 4));
       if (inst->src.type == REG) {
         emit_2(0x6b, EBCREG[R1]); // PUSH R1
         emit_2(0x6b, EBCREG[R2]); // PUSH R2
@@ -380,7 +380,7 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
     case STORE:
       // MOVREL R7, mem
       emit_2(0xb9, EBCREG[R7]);
-      emit_le32(mem_addr - (text_vaddr + emit_cnt() + 6));
+      emit_le32(mem_addr - (text_vaddr + emit_cnt() + 4));
       emit_2(0x6b, EBCREG[R1]); // PUSH R1
       emit_2(0x6b, EBCREG[R2]); // PUSH R2
       emit_ebc_mov_reg(R1, inst->src.reg); // MOVdd R1, inst->src.reg
