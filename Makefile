@@ -472,8 +472,7 @@ RUNNER := octave -q
 include target.mk
 
 TARGET := ebc
-RUNNER := tools/runebc.sh
-TOOL := ebcvm
+RUNNER := ebcvm
 include target.mk
 
 test: $(TEST_RESULTS)
