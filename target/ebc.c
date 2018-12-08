@@ -246,24 +246,6 @@ static void emit_le32(uint32_t a) {
   emit_le(a);
 }
 
-static void emit_le64(uint64_t a) {
-  emit_1(a % 256);
-  a /= 256;
-  emit_1(a % 256);
-  a /= 256;
-  emit_1(a % 256);
-  a /= 256;
-  emit_1(a % 256);
-  a /= 256;
-  emit_1(a % 256);
-  a /= 256;
-  emit_1(a % 256);
-  a /= 256;
-  emit_1(a % 256);
-  a /= 256;
-  emit_1(a);
-}
-
 static void emit_ebc_mov_reg(Reg dst, Reg src) {
   // MOVqq R_1, R_2
   emit_2(0x28, (EBCREG[src] << 4) + EBCREG[dst]);
@@ -300,10 +282,13 @@ static void emit_ebc_jmp(Inst* inst, int op, int* pc2addr) {
     emit_2(0x6c, EBCREG[inst->jmp.reg]); // POP inst->jmp.reg
     emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
   } else {
-    // JMP64 IMM (relative)
-    emit_2(0xc1, op + (1 << 4));
-    emit_le64(pc2addr[inst->jmp.imm] - (emit_cnt() + 8));
-    //emit_le64(text_vaddr + pc2addr[inst->jmp.imm]);
+    // MOVdw R7, @R0(0, 0)
+    emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) +EBCREG[R7], 0x00, 0x00);
+    emit_2(0x6b, EBCREG[R1]); // PUSH R1
+    emit_ebc_mov_imm(R1, pc2addr[inst->jmp.imm]);
+    emit_2(0x0c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD R7, R1
+    emit_2(0x6c, EBCREG[R1]); // POP R1
+    emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
   }
 }
 
