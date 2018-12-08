@@ -2,4 +2,5 @@
 
 set -e
 
-ebcvm $1
+INCLUDE=fasmg-ebc/include fasmg $1 $1.efi
+ebcvm ./$1.efi
