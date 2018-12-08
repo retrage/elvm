@@ -136,6 +136,7 @@ typedef struct _IMAGE_SECTION_HEADER {
 int size_of_image;
 int text_vaddr, text_vsize, text_raddr, text_rsize;
 int data_vaddr, data_vsize, data_raddr, data_rsize;
+int rodata_vaddr, rodata_vsize, rodata_raddr, rodata_rsize;
 int mem_addr, key_addr, string_addr;
 
 static int emit_aligned(int addr, int align) {
@@ -152,7 +153,7 @@ static void emit_pe_header() {
 
   IMAGE_FILE_HEADER* fhdr = &nthdr->FileHeader;
   fhdr->Machine = 0x0ebc;
-  fhdr->NumberOfSections = 2; // .text + .data
+  fhdr->NumberOfSections = 3; // .text + .data + .rodata
   fhdr->SizeOfOptionalHeader = SIZE_OF_OPTIONAL_HEADER;
   fhdr->Characteristics |= IMAGE_FILE_EXECUTABLE_IMAGE;
   fhdr->Characteristics |= IMAGE_FILE_32BIT_MACHINE;
@@ -192,16 +193,29 @@ static void emit_pe_header() {
   sechdr->Characteristics |= IMAGE_SCN_CNT_INITIALIZED_DATA;
   sechdr->Characteristics |= IMAGE_SCN_MEM_READ;
   sechdr->Characteristics |= IMAGE_SCN_MEM_WRITE;
+  // .rodata
+  IMAGE_SECTION_HEADER* rodata_sechdr;
+  rodata_sechdr = calloc(1, sizeof(IMAGE_SECTION_HEADER));
+  sechdr = rodata_sechdr;
+  strcpy((char *)sechdr->Name, ".rodata");
+  sechdr->PointerToRawData = rodata_raddr;
+  sechdr->SizeOfRawData = rodata_rsize;
+  sechdr->VirtualAddress = rodata_vaddr;
+  sechdr->Misc.VirtualSize = rodata_vsize;
+  sechdr->Characteristics |= IMAGE_SCN_CNT_INITIALIZED_DATA;
+  sechdr->Characteristics |= IMAGE_SCN_MEM_READ;
 
   fwrite(doshdr, sizeof(IMAGE_DOS_HEADER), 1, stdout);
   fwrite(nthdr, sizeof(IMAGE_NT_HEADERS), 1, stdout);
   fwrite(text_sechdr, sizeof(IMAGE_SECTION_HEADER), 1, stdout);
   fwrite(data_sechdr, sizeof(IMAGE_SECTION_HEADER), 1, stdout);
+  fwrite(rodata_sechdr, sizeof(IMAGE_SECTION_HEADER), 1, stdout);
 
   // padding
   int hdr_size = 0;
   hdr_size += sizeof(IMAGE_DOS_HEADER);
   hdr_size += sizeof(IMAGE_NT_HEADERS);
+  hdr_size += sizeof(IMAGE_SECTION_HEADER);
   hdr_size += sizeof(IMAGE_SECTION_HEADER);
   hdr_size += sizeof(IMAGE_SECTION_HEADER);
   char *padding = calloc(SIZE_OF_HEADERS - hdr_size, sizeof(char));
@@ -271,8 +285,20 @@ static void emit_ebc_mov(Reg dst, Value* src) {
 
 static void emit_ebc_jmp(Inst* inst, int op, int* pc2addr) {
   if (inst->jmp.type == REG) {
-    // FIXME: JMP32 R_1
-    emit_2(0x01, op + EBCREG[inst->jmp.reg]);
+    emit_2(0x6b, EBCREG[inst->jmp.reg]); // PUSH inst->jmp.reg
+    emit_4(0x77, 0x10 + EBCREG[R7], 0x04, 0x00); // MOVIww R7, 4
+    emit_2(0x0f, (EBCREG[R7] << 4) + EBCREG[inst->jmp.reg]); // MULU inst->jmp.reg, R7
+    // MOVREL R7, rodata
+    emit_2(0xb9, EBCREG[R7]);
+    emit_le32(rodata_vaddr - (text_vaddr + emit_cnt() + 4));
+    emit_2(0x0c, (EBCREG[inst->jmp.reg] << 4) + EBCREG[R7]); // ADD R7, inst->jmp.reg
+    // MOVww R7, @R7
+    emit_2(0x1e, 0x80 + (EBCREG[R7] << 4) + EBCREG[R7]);
+    // MOVdw inst->jmp.reg, @R0(0, +8)
+    emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) +EBCREG[inst->jmp.reg], 0x08, 0x00);
+    emit_2(0x0c, (EBCREG[inst->jmp.reg] << 4) + EBCREG[R7]); // ADD R7, inst->jmp.reg
+    emit_2(0x6c, EBCREG[inst->jmp.reg]); // POP inst->jmp.reg
+    emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
   } else {
     // JMP64 IMM (relative)
     emit_2(0xc1, op + (1 << 4));
@@ -282,6 +308,10 @@ static void emit_ebc_jmp(Inst* inst, int op, int* pc2addr) {
 }
 
 static void init_state_ebc() {
+  // XXX: push .text virtual address
+  emit_2(0x2a, (0x01 << 4) + EBCREG[R7]); // STORESP R7, IP
+  emit_2(0x6b, EBCREG[R7]); // PUSH R7
+
   emit_ebc_mov_imm(A, 0);
   emit_ebc_mov_imm(B, 0);
   emit_ebc_mov_imm(C, 0);
@@ -421,6 +451,7 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case EXIT:
+      emit_2(0x6c, EBCREG[R7]); // POP R7
       emit_2(0x04, 0x00); // RET
       break;
 
@@ -663,7 +694,12 @@ void target_ebc(Module* module) {
   data_raddr = emit_aligned(text_raddr + text_rsize, FILE_ALIGNMENT) - FILE_ALIGNMENT;
   data_rsize = emit_aligned(data_vsize, FILE_ALIGNMENT);
 
-  size_of_image = emit_aligned(data_vaddr + data_vsize - text_vaddr, SECTION_ALIGNMENT);
+  rodata_vaddr = emit_aligned(data_vaddr + data_vsize, SECTION_ALIGNMENT);
+  rodata_vsize = pc_cnt * 4;
+  rodata_raddr = emit_aligned(data_raddr + data_rsize, FILE_ALIGNMENT) - FILE_ALIGNMENT;;
+  rodata_rsize = emit_aligned(rodata_vsize, FILE_ALIGNMENT);
+
+  size_of_image = emit_aligned(rodata_vaddr + rodata_vsize - text_vaddr, SECTION_ALIGNMENT);
 
   mem_addr = data_vaddr;
   string_addr = (data_vaddr + data_vsize) - 4 * 2;
@@ -680,7 +716,6 @@ void target_ebc(Module* module) {
   for (Inst* inst = module->text; inst; inst = inst->next) {
     ebc_emit_inst(inst, pc2addr);
   }
-
   // padding
   for (int i = 0; i < text_rsize - text_vsize; i++) {
     emit_1(0x00);
@@ -689,9 +724,16 @@ void target_ebc(Module* module) {
   for (Data* data = module->data; data; data = data->next) {
     emit_le32(data->v);
   }
-
   // padding
-  for (int i = 0; i < data_rsize - data_vsize; i++) {
+  for (int i = 0; i < data_rsize - data_vsize + 8; i++) {
+    emit_1(0x00);
+  }
+
+  for (int i = 0; i < pc_cnt; i++) {
+    emit_le32(pc2addr[i]);
+  }
+  // padding
+  for (int i = 0; i < rodata_rsize - rodata_vsize; i++) {
     emit_1(0x00);
   }
 }
