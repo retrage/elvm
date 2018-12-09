@@ -267,7 +267,7 @@ static void emit_ebc_jmp(Inst* inst, int op, int* pc2addr) {
     emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
   } else {
     // MOVdw R7, @R0(0, +8)
-    emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) +EBCREG[R7], 0x08, 0x00);
+    emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) + EBCREG[R7], 0x08, 0x00);
     emit_2(0x6b, EBCREG[R1]); // PUSH R1
     emit_ebc_mov_imm(R1, pc2addr[inst->jmp.imm]);
     emit_2(0x0c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD R7, R1
