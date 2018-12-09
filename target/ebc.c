@@ -357,6 +357,7 @@ void target_ebc(Module* module) {
   text.vsize = emit_cnt();
   text.raddr = aligned(PE_HEADER_SIZE, PE_FILE_ALIGN) - PE_FILE_ALIGN;
   text.rsize = aligned(text.vsize, PE_FILE_ALIGN);
+  text.chars = 0x60000020; // r-x exec
 
   strcpy(rodata.name, ".rodata");
   rodata.vaddr = aligned(text.vaddr + text.vsize, PE_SEC_ALIGN);
@@ -364,6 +365,7 @@ void target_ebc(Module* module) {
   rodata.raddr = aligned(text.raddr + text.rsize,
                                       PE_FILE_ALIGN) - PE_FILE_ALIGN;
   rodata.rsize = aligned(rodata.vsize, PE_FILE_ALIGN);
+  rodata.chars = 0x40000040; // r-- inited
 
   imagesz = aligned(rodata.vaddr + rodata.vsize - text.vaddr,
                                       PE_SEC_ALIGN);

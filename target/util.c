@@ -279,10 +279,14 @@ int emit_pe_header(uint16_t machine, uint32_t imagesz, uint16_t nsec) {
   nthdr[0x32] = 0x40; nthdr[0x33] = 0x00;
   nthdr[0x34] = 0x00; nthdr[0x35] = 0x00;
   nthdr[0x36] = 0x00; nthdr[0x37] = 0x00; // ImageBase
-  nthdr[0x38] = 0x00; nthdr[0x39] = 0x10;
-  nthdr[0x3a] = 0x00; nthdr[0x3b] = 0x00; // SectionAlignment
-  nthdr[0x3c] = 0x00; nthdr[0x3d] = 0x02;
-  nthdr[0x3e] = 0x00; nthdr[0x3f] = 0x00; // FileAlignment
+  nthdr[0x38] = PE_SEC_ALIGN % 256;
+  nthdr[0x39] = PE_SEC_ALIGN / 256 % 256;
+  nthdr[0x3a] = PE_SEC_ALIGN / 65536;
+  nthdr[0x3b] = 0x00; // SectionAlignment
+  nthdr[0x3c] = PE_FILE_ALIGN % 256;
+  nthdr[0x3d] = PE_FILE_ALIGN / 256 % 256;
+  nthdr[0x3e] = PE_FILE_ALIGN / 65536;
+  nthdr[0x3f] = 0x00; // FileAlignment
   nthdr[0x50] = imagesz % 256;
   nthdr[0x51] = imagesz / 256 % 256;
   nthdr[0x52] = imagesz / 65536;
