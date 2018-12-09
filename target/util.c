@@ -250,3 +250,79 @@ void emit_elf_header(uint16_t machine, uint32_t filesz) {
   fwrite(ehdr, 52, 1, stdout);
   fwrite(phdr, 32, 1, stdout);
 }
+
+int emit_pe_header(uint16_t machine, uint32_t imagesz, uint16_t nsec) {
+  // DOS Header
+  char *doshdr = calloc(1, sizeof(char) * 0x40);
+  doshdr[0x00] = 0x4d; doshdr[0x01] = 0x5a; // "MZ"
+  doshdr[0x3c] = 0x40; // e_lfanew = 0x0040
+
+  // PE Header
+  char *nthdr = calloc(1, sizeof(char) * 0x108);
+  nthdr[0x00] = 0x50; nthdr[0x01] = 0x45; // "PE"
+
+  // File Header
+  nthdr[0x04] = machine % 256;
+  nthdr[0x05] = machine / 256; // Machine
+  nthdr[0x06] = nsec % 256;
+  nthdr[0x07] = nsec / 256; // NumberOfSection
+  nthdr[0x14] = 0xf0; nthdr[0x15] = 0x00; // SizeOfOptionalHeader
+  nthdr[0x16] = 0x02; nthdr[0x17] = 0x21; // Characteristics
+
+  // Optional Header
+  nthdr[0x18] = 0x0b; nthdr[0x19] = 0x02; // PE+
+  nthdr[0x28] = PE_TEXT_START % 256;
+  nthdr[0x29] = PE_TEXT_START / 256 % 256;
+  nthdr[0x2a] = PE_TEXT_START / 65536;
+  nthdr[0x2b] = 0x00; // AddressOfEntryPoint
+  nthdr[0x30] = 0x00; nthdr[0x31] = 0x00;
+  nthdr[0x32] = 0x40; nthdr[0x33] = 0x00;
+  nthdr[0x34] = 0x00; nthdr[0x35] = 0x00;
+  nthdr[0x36] = 0x00; nthdr[0x37] = 0x00; // ImageBase
+  nthdr[0x38] = 0x00; nthdr[0x39] = 0x10;
+  nthdr[0x3a] = 0x00; nthdr[0x3b] = 0x00; // SectionAlignment
+  nthdr[0x3c] = 0x00; nthdr[0x3d] = 0x02;
+  nthdr[0x3e] = 0x00; nthdr[0x3f] = 0x00; // FileAlignment
+  nthdr[0x50] = imagesz % 256;
+  nthdr[0x51] = imagesz / 256 % 256;
+  nthdr[0x52] = imagesz / 65536;
+  nthdr[0x53] = 0x00; // SizeOfImage
+  nthdr[0x54] = PE_HEADER_SIZE % 256;
+  nthdr[0x55] = PE_HEADER_SIZE / 256 % 256;
+  nthdr[0x56] = PE_HEADER_SIZE / 65536;
+  nthdr[0x57] = 0x00; // SizeOfHeaders
+
+  fwrite(doshdr, 0x40, 1, stdout);
+  fwrite(nthdr, 0x108, 1, stdout);
+
+  return 0x40 + 0x108;
+}
+
+int emit_pe_sechdr(Sec* sec) {
+  char *sechdr = calloc(1, sizeof(char) * 0x28);
+  strcpy(sechdr, sec->name);
+  sechdr[0x08] = sec->vsize % 256;
+  sechdr[0x09] = sec->vsize / 256 % 256;
+  sechdr[0x0a] = sec->vsize / 65536 % 256;
+  sechdr[0x0b] = sec->vsize / 16777216 % 256; // VirtualSize
+  sechdr[0x0c] = sec->vaddr % 256;
+  sechdr[0x0d] = sec->vaddr / 256 % 256;
+  sechdr[0x0e] = sec->vaddr / 65536 % 256;
+  sechdr[0x0f] = sec->vaddr / 16777216 % 256; // VirtualAddress
+  sechdr[0x10] = sec->rsize % 256;
+  sechdr[0x11] = sec->rsize / 256 % 256;
+  sechdr[0x12] = sec->rsize / 65536 % 256;
+  sechdr[0x13] = sec->rsize / 16777216 % 256; // SizeOfRawData
+  sechdr[0x14] = sec->raddr % 256;
+  sechdr[0x15] = sec->raddr / 256 % 256;;
+  sechdr[0x16] = sec->raddr / 65536 % 256;
+  sechdr[0x17] = sec->raddr / 16777216 % 256; // PointerToRawData
+  sechdr[0x24] = sec->chars % 256;
+  sechdr[0x25] = sec->chars / 256 % 256;;
+  sechdr[0x26] = sec->chars / 65536 % 256;
+  sechdr[0x27] = sec->chars / 16777216 % 256; // Characteristics
+
+  fwrite(sechdr, 0x28, 1, stdout);
+
+  return 0x28;
+}

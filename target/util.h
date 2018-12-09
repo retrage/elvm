@@ -13,6 +13,20 @@ typedef uint8_t byte;
 static const int ELF_TEXT_START = 0x100000;
 static const int ELF_HEADER_SIZE = 84;
 
+typedef struct {
+  char name[8];
+  uint32_t vsize;
+  uint32_t vaddr;
+  uint32_t rsize;
+  uint32_t raddr;
+  uint32_t chars;
+} Sec;
+
+static const int PE_TEXT_START = 0x1000;
+static const int PE_HEADER_SIZE = 0x0200;
+static const int PE_SEC_ALIGN = 0x1000;
+static const int PE_FILE_ALIGN = 0x0200;
+
 char* vformat(const char* fmt, va_list ap);
 char* format(const char* fmt, ...);
 
@@ -52,5 +66,8 @@ int emit_chunked_main_loop(Inst* inst,
                            void (*emit_inst)(Inst* inst));
 
 void emit_elf_header(uint16_t machine, uint32_t filesz);
+
+int emit_pe_header(uint16_t machine, uint32_t imagesz, uint16_t nsec);
+int emit_pe_sechdr(Sec* sec);
 
 #endif  // ELVM_UTIL_H_
