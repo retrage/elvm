@@ -261,30 +261,25 @@ static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
       emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
   }
 
+  emit_2(0x6b, EBCREG[R1]); // PUSH R1
+  emit_2(0x6b, EBCREG[R2]); // PUSH R2
   if (inst->jmp.type == REG) {
-    emit_2(0x6b, EBCREG[inst->jmp.reg]); // PUSH inst->jmp.reg
-    emit_4(0x77, 0x10 + EBCREG[R7], 0x04, 0x00); // MOVIww R7, 4
-    emit_2(0x0f, (EBCREG[R7] << 4) + EBCREG[inst->jmp.reg]); // MULU inst->jmp.reg, R7
-    // MOVREL R7, rodata
-    emit_2(0xb9, EBCREG[R7]);
+    // MOVREL R1, rodata
+    emit_2(0xb9, EBCREG[R1]);
     emit_le32(rodata_vaddr - (text_vaddr + emit_cnt() + 4));
-    emit_2(0x0c, (EBCREG[inst->jmp.reg] << 4) + EBCREG[R7]); // ADD R7, inst->jmp.reg
-    // MOVww R7, @R7
-    emit_2(0x1e, 0x80 + (EBCREG[R7] << 4) + EBCREG[R7]);
-    // MOVdw inst->jmp.reg, @R0(0, +16)
-    emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) +EBCREG[inst->jmp.reg], 0x10, 0x00);
-    emit_2(0x0c, (EBCREG[inst->jmp.reg] << 4) + EBCREG[R7]); // ADD R7, inst->jmp.reg
-    emit_2(0x6c, EBCREG[inst->jmp.reg]); // POP inst->jmp.reg
-    emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
+    emit_ebc_mov_imm(R2, 0x04);
+    emit_2(0x4e, (EBCREG[R7] << 4) + EBCREG[R2]); // MUL64 R2, R7
+    emit_2(0x4c, (EBCREG[R2] << 4) + EBCREG[R7]); // ADD64 R7, R1
+    emit_2(0x1e, 0x80 + (EBCREG[R7] << 4) + EBCREG[R7]); // MOVww R7, @R7
   } else {
-    // MOVdw R7, @R0(0, +8)
-    emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) + EBCREG[R7], 0x08, 0x00);
-    emit_2(0x6b, EBCREG[R1]); // PUSH R1
-    emit_ebc_mov_imm(R1, pc2addr[inst->jmp.imm]);
-    emit_2(0x0c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD R7, R1
-    emit_2(0x6c, EBCREG[R1]); // POP R1
-    emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
+    emit_ebc_mov_imm(R7, pc2addr[inst->jmp.imm]);
   }
+  // MOVdw R1, @R0(0, +16)
+  emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) + EBCREG[R1], 0x10, 0x00);
+  emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
+  emit_2(0x6c, EBCREG[R2]); // POP R2
+  emit_2(0x6c, EBCREG[R1]); // POP R1
+  emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
 }
 
 static void emit_ebc_arith_reg(Reg dst, int op, Reg src) {
