@@ -66,38 +66,6 @@ static void emit_ebc_mov(Reg dst, Value* src) {
   }
 }
 
-static void emit_ebc_cmp(Inst* inst, int cmp) {
-  emit_ebc_mov(R7, &inst->src);
-  emit_2(cmp, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
-}
-
-static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
-  if (op) {
-    emit_ebc_cmp(inst, cmp);
-    if (inst->op == JLT || inst->op == JGT)
-      emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
-  }
-
-  emit_2(0x6b, EBCREG[R1]); // PUSH R1
-  emit_2(0x6b, EBCREG[R2]); // PUSH R2
-  if (inst->jmp.type == REG) {
-    // MOVREL R1, rodata
-    emit_2(0xb9, EBCREG[R1]);
-    emit_le32(rodata_vaddr - (text_vaddr + emit_cnt() + 4));
-    emit_ebc_mov_imm(R2, 0x04);
-    emit_2(0x4e, (EBCREG[R7] << 4) + EBCREG[R2]); // MUL64 R2, R7
-    emit_2(0x4c, (EBCREG[R2] << 4) + EBCREG[R7]); // ADD64 R7, R1
-    emit_2(0x1e, 0x80 + (EBCREG[R7] << 4) + EBCREG[R7]); // MOVww R7, @R7
-  } else {
-    emit_ebc_mov_imm(R7, pc2addr[inst->jmp.imm]);
-  }
-  // MOVdw R1, @R0(0, +16)
-  emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) + EBCREG[R1], 0x10, 0x00);
-  emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
-  emit_2(0x6c, EBCREG[R2]); // POP R2
-  emit_2(0x6c, EBCREG[R1]); // POP R1
-  emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
-}
 
 static void emit_ebc_arith_reg(Reg dst, int op, Reg src) {
   emit_ebc_mov_reg(R7, src);
@@ -121,6 +89,11 @@ static void emit_ebc_arith(Inst* inst, int op) {
   }
 }
 
+static void emit_ebc_cmp(Inst* inst, int cmp) {
+  emit_ebc_mov(R7, &inst->src);
+  emit_2(cmp, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
+}
+
 static void emit_ebc_setcc(Inst* inst, int cmp, int op) {
   emit_ebc_cmp(inst, cmp);
   emit_2(op, 0x04); // JMP8cc .L1
@@ -128,6 +101,34 @@ static void emit_ebc_setcc(Inst* inst, int cmp, int op) {
   emit_2(0x02, 0x04); // JMP8 .L2
   emit_ebc_mov_imm(inst->dst.reg, 0x00);
   emit_2(0x02, 0x00); // JMP8 .L2
+}
+
+static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
+  if (op) {
+    emit_ebc_cmp(inst, cmp);
+    if (inst->op == JLT || inst->op == JGT)
+      emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
+  }
+
+  emit_2(0x6b, EBCREG[R1]); // PUSH R1
+  emit_2(0x6b, EBCREG[R2]); // PUSH R2
+  if (inst->jmp.type == REG) {
+    // MOVREL R1, rodata
+    emit_2(0xb9, EBCREG[R1]);
+    emit_le32(rodata.vaddr - (text.vaddr + emit_cnt() + 4));
+    emit_ebc_mov_imm(R2, 0x04);
+    emit_2(0x4e, (EBCREG[R7] << 4) + EBCREG[R2]); // MUL64 R2, R7
+    emit_2(0x4c, (EBCREG[R2] << 4) + EBCREG[R7]); // ADD64 R7, R1
+    emit_2(0x1e, 0x80 + (EBCREG[R7] << 4) + EBCREG[R7]); // MOVww R7, @R7
+  } else {
+    emit_ebc_mov_imm(R7, pc2addr[inst->jmp.imm]);
+  }
+  // MOVdw R1, @R0(0, +16)
+  emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) + EBCREG[R1], 0x10, 0x00);
+  emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
+  emit_2(0x6c, EBCREG[R2]); // POP R2
+  emit_2(0x6c, EBCREG[R1]); // POP R1
+  emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
 }
 
 static void init_state_ebc(Data* data) {
