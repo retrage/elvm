@@ -7,8 +7,6 @@ static void rs_init_state(void) {
 
   emit_line("");
   emit_line("#[allow(dead_code)]");
-  emit_line("");
-
   emit_line("struct State {");
   inc_indent();
   for (int i = 0; i < 7; i++) {
@@ -50,7 +48,7 @@ static void rs_emit_func_prologue(int func_id) {
   inc_indent();
   emit_line("match state.pc {");
   inc_indent();
-  emit_line("-1 => {");
+  emit_line("-1 => { // dummy");
   inc_indent();
 }
 
