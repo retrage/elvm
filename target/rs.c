@@ -41,6 +41,7 @@ static void rs_init_state(void) {
 
 static void rs_emit_func_prologue(int func_id) {
   emit_line("");
+  emit_line("#[allow(unreachable_code)]");
   emit_line("fn func%d(mut state: State) -> State {", func_id);
   inc_indent();
   emit_line("while %d <= state.pc && state.pc < %d {",
@@ -173,6 +174,7 @@ void target_rs(Module* module) {
                                          rs_emit_inst);
 
   emit_line("");
+  emit_line("#[allow(unreachable_code)]");
   emit_line("fn main() {");
   inc_indent();
 
