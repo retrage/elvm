@@ -78,9 +78,13 @@ static void rs_emit_pc_change(int pc) {
   inc_indent();
 }
 
+static const char* rs_reg(Reg reg) {
+  return format("state.%s", reg_names[reg]);
+}
+
 static const char* rs_value_str(Value* v) {
   if (v->type == REG) {
-    return format("state.%s", reg_names[v->reg]);
+    return rs_reg(v->reg);
   } else if (v->type == IMM) {
     return format("%d", v->imm);
   } else {
@@ -92,32 +96,58 @@ static const char* rs_src_str(Inst* inst) {
   return rs_value_str(&inst->src);
 }
 
+static const char* rs_cmp_str(Inst* inst, const char* true_str) {
+  int op = normalize_cond(inst->op, 0);
+  const char* op_str;
+  switch (op) {
+    case JEQ:
+      op_str = "=="; break;
+    case JNE:
+      op_str = "!="; break;
+    case JLT:
+      op_str = "<"; break;
+    case JGT:
+      op_str = ">"; break;
+    case JLE:
+      op_str = "<="; break;
+    case JGE:
+      op_str = ">="; break;
+    case JMP:
+      return true_str;
+    default:
+      error("oops");
+  }
+  return format("%s %s %s",
+      rs_reg(inst->dst.reg), op_str, rs_src_str(inst));
+}
+
 static void rs_emit_inst(Inst* inst) {
   switch (inst->op) {
   case MOV:
-    emit_line("state.%s = %s;", reg_names[inst->dst.reg], rs_src_str(inst));
+    emit_line("%s = %s as i32;",
+              rs_reg(inst->dst.reg), rs_src_str(inst));
     break;
 
   case ADD:
-    emit_line("state.%s = (state.%s + %s) & " UINT_MAX_STR ";",
-              reg_names[inst->dst.reg],
-              reg_names[inst->dst.reg], rs_src_str(inst));
+    emit_line("%s = (%s + %s) & " UINT_MAX_STR ";",
+              rs_reg(inst->dst.reg),
+              rs_reg(inst->dst.reg), rs_src_str(inst));
     break;
 
   case SUB:
-    emit_line("state.%s = (state.%s - state.%s) & " UINT_MAX_STR ";",
-              reg_names[inst->dst.reg],
-              reg_names[inst->dst.reg], rs_src_str(inst));
+    emit_line("%s = (%s - %s) & " UINT_MAX_STR ";",
+              rs_reg(inst->dst.reg),
+              rs_reg(inst->dst.reg), rs_src_str(inst));
     break;
 
   case LOAD:
-    emit_line("state.%s = state.mem[%s];",
-              reg_names[inst->dst.reg], rs_src_str(inst));
+    emit_line("%s = state.mem[%s as usize];",
+              rs_reg(inst->dst.reg), rs_src_str(inst));
     break;
 
   case STORE:
-    emit_line("state.mem[%s] = state.%s;", rs_src_str(inst),
-              reg_names[inst->dst.reg]);
+    emit_line("state.mem[%s as usize] = %s;",
+              rs_src_str(inst), rs_reg(inst->dst.reg));
     break;
 
   case PUTC:
@@ -125,7 +155,7 @@ static void rs_emit_inst(Inst* inst) {
     break;
 
   case GETC:
-    emit_line("state.%s = getchar() as i32;", reg_names[inst->dst.reg]);
+    emit_line("%s = getchar() as i32;", rs_reg(inst->dst.reg));
     break;
 
   case EXIT:
@@ -141,8 +171,8 @@ static void rs_emit_inst(Inst* inst) {
   case GT:
   case LE:
   case GE:
-    emit_line("state.%s = (%s) as i32;",
-              reg_names[inst->dst.reg], cmp_str(inst, "1"));
+    emit_line("%s = (%s) as i32;",
+              rs_reg(inst->dst.reg), rs_cmp_str(inst, "1"));
     break;
 
   case JEQ:
@@ -152,7 +182,7 @@ static void rs_emit_inst(Inst* inst) {
   case JLE:
   case JGE:
     emit_line("if %s { state.pc = %s - 1; }",
-              cmp_str(inst, "1"), rs_value_str(&inst->jmp));
+              rs_cmp_str(inst, "1"), rs_value_str(&inst->jmp));
     break;
 
   case JMP:
