@@ -22,7 +22,7 @@ static void rs_init_state(void) {
   inc_indent();
   emit_line("let ch = match std::io::stdin().bytes().next().and_then(|result| result.ok()).map(|byte| byte as u8) {");
   inc_indent();
-  emit_line("None => process::exit(1),");
+  emit_line("None => 0,");
   emit_line("Some(ch) => ch,");
   dec_indent();
   emit_line("};");
