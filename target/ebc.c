@@ -149,6 +149,7 @@ static void init_state_ebc(Data* data) {
   emit_2(0x35, 0x01); // PUSHn32 R1
   emit_6(0x83, 0x2f, 0x85, 0x01, 0x00, 0x10); // CALL32EXa @R7 (.AllocatePool)
   emit_4(0x60, 0x00, 0x03, 0x10); // MOVqw R0, R0 (+3, 0)
+  emit_2(0x6c, EBCREG[R7]); // POP R7
 
   for (int mp = 0; data; data = data->next, mp++) {
     if (data->v) {
