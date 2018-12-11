@@ -411,8 +411,8 @@ include target.mk
 
 TARGET := rs
 RUNNER := tools/runrs.sh
+TOOL := rustc
 include target.mk
-$(OUT.eir.rs.out): tools/runrs.sh
 
 test: $(TEST_RESULTS)
 
