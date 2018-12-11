@@ -66,7 +66,6 @@ static void emit_ebc_mov(Reg dst, Value* src) {
   }
 }
 
-
 static void emit_ebc_arith_reg(Reg dst, int op, Reg src) {
   emit_ebc_mov_reg(R7, src);
   emit_2(op, (EBCREG[R7] << 4) + EBCREG[dst]);
