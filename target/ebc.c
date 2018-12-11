@@ -12,11 +12,11 @@ static int aligned(int addr, int align) {
   return ((addr / align) + 1) * align;
 }
 
-static void emit_headers() {
+static void emit_headers(int imagesz, Sec* text, Sec* rodata) {
   int hdrsz = 0;
   hdrsz += emit_pe_header(0x0ebc, imagesz, 2);
-  hdrsz += emit_pe_sechdr(&text);
-  hdrsz += emit_pe_sechdr(&rodata);
+  hdrsz += emit_pe_sechdr(text);
+  hdrsz += emit_pe_sechdr(rodata);
 
   char *padding = calloc(PE_HEADER_SIZE - hdrsz, sizeof(char));
 
@@ -353,26 +353,27 @@ void target_ebc(Module* module) {
     ebc_emit_inst(inst, pc2addr);
   }
 
-  strcpy(text.name, ".text");
-  text.vaddr = aligned(PE_HEADER_SIZE, PE_SEC_ALIGN);
-  text.vsize = emit_cnt();
-  text.raddr = aligned(PE_HEADER_SIZE, PE_FILE_ALIGN) - PE_FILE_ALIGN;
-  text.rsize = aligned(text.vsize, PE_FILE_ALIGN);
-  text.chars = 0x60000020; // r-x exec
+  Sec* text = calloc(1, sizeof(Sec));
+  strcpy(text->name, ".text");
+  text->vaddr = aligned(PE_HEADER_SIZE, PE_SEC_ALIGN);
+  text->vsize = emit_cnt();
+  text->raddr = aligned(PE_HEADER_SIZE, PE_FILE_ALIGN) - PE_FILE_ALIGN;
+  text->rsize = aligned(text->vsize, PE_FILE_ALIGN);
+  text->chars = 0x60000020; // r-x exec
 
-  strcpy(rodata.name, ".rodata");
-  rodata.vaddr = aligned(text.vaddr + text.vsize, PE_SEC_ALIGN);
-  rodata.vsize = pc_cnt * 4;
-  rodata.raddr = aligned(text.raddr + text.rsize,
-                                      PE_FILE_ALIGN) - PE_FILE_ALIGN;
-  rodata.rsize = aligned(rodata.vsize, PE_FILE_ALIGN);
-  rodata.chars = 0x40000040; // r-- inited
+  Sec* rodata = calloc(1, sizeof(Sec));
+  strcpy(rodata->name, ".rodata");
+  rodata->vaddr = aligned(text->vaddr + text.vsize, PE_SEC_ALIGN);
+  rodata->vsize = pc_cnt * 4;
+  rodata->raddr = aligned(text->raddr + text->rsize, PE_FILE_ALIGN)
+                                                    - PE_FILE_ALIGN;
+  rodata->rsize = aligned(rodata->vsize, PE_FILE_ALIGN);
+  rodata->chars = 0x40000040; // r-- inited
 
-  imagesz = aligned(rodata.vaddr + rodata.vsize - text.vaddr,
-                                      PE_SEC_ALIGN);
+  int imagesz = aligned(rodata->vaddr + rodata->vsize - text->vaddr, PE_SEC_ALIGN);
 
   // generate PE header
-  emit_headers();
+  emit_headers(imagesz, text, rodata);
 
   // generate actual code
   emit_reset();
