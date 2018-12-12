@@ -472,7 +472,7 @@ RUNNER := octave -q
 include target.mk
 
 TARGET := ebc
-RUNNER := ebcvm
+RUNNER := ebcvm --heap=67108864 --reloc=1
 include target.mk
 
 test: $(TEST_RESULTS)
