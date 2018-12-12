@@ -363,7 +363,7 @@ void target_ebc(Module* module) {
 
   Sec* rodata = calloc(1, sizeof(Sec));
   strcpy(rodata->name, ".rodata");
-  rodata->vaddr = aligned(text->vaddr + text.vsize, PE_SEC_ALIGN);
+  rodata->vaddr = aligned(text->vaddr + text->vsize, PE_SEC_ALIGN);
   rodata->vsize = pc_cnt * 4;
   rodata->raddr = aligned(text->raddr + text->rsize, PE_FILE_ALIGN)
                                                     - PE_FILE_ALIGN;
@@ -384,7 +384,7 @@ void target_ebc(Module* module) {
     ebc_emit_inst(inst, pc2addr);
   }
   // padding
-  for (int i = 0; i < (int)(text.rsize - text.vsize); i++) {
+  for (int i = 0; i < (int)(text->rsize - text->vsize); i++) {
     emit_1(0x00);
   }
 
@@ -392,7 +392,7 @@ void target_ebc(Module* module) {
     emit_le32(pc2addr[i]);
   }
   // padding
-  for (int i = 0; i < (int)(rodata.rsize - rodata.vsize); i++) {
+  for (int i = 0; i < (int)(rodata->rsize - rodata->vsize); i++) {
     emit_1(0x00);
   }
 }
