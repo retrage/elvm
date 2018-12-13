@@ -109,22 +109,23 @@ static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
   }
 
   emit_2(0x6b, EBCREG[R1]); // PUSH R1
-  emit_2(0x6b, EBCREG[R2]); // PUSH R2
   if (inst->jmp.type == REG) {
+    emit_ebc_mov_reg(R7, inst->jmp.reg);
+    emit_2(0x6b, EBCREG[R2]); // PUSH R2
     // MOVREL R1, rodata
     emit_2(0xb9, EBCREG[R1]);
     emit_le32(rodata.vaddr - (text.vaddr + emit_cnt() + 4));
     emit_ebc_mov_imm(R2, 0x04);
-    emit_2(0x4e, (EBCREG[R7] << 4) + EBCREG[R2]); // MUL64 R2, R7
-    emit_2(0x4c, (EBCREG[R2] << 4) + EBCREG[R7]); // ADD64 R7, R1
+    emit_2(0x4e, (EBCREG[R2] << 4) + EBCREG[R7]); // MUL64 R7, R2
+    emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
     emit_2(0x1e, 0x80 + (EBCREG[R7] << 4) + EBCREG[R7]); // MOVww R7, @R7
+    emit_2(0x6c, EBCREG[R2]); // POP R2
   } else {
     emit_ebc_mov_imm(R7, pc2addr[inst->jmp.imm]);
   }
-  // MOVdw R1, @R0(0, +16)
+  // MOVdw R1, @R0(0, +18)
   emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) + EBCREG[R1], 0x10, 0x00);
   emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
-  emit_2(0x6c, EBCREG[R2]); // POP R2
   emit_2(0x6c, EBCREG[R1]); // POP R1
   emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
 }
