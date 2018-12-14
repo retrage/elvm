@@ -186,7 +186,7 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
 
     case LOAD:
     case STORE:
-      emit_ebc_mov_reg(R7, R0);
+      emit_2(0x28, 0x80 + (EBCREG[R0] << 4) + EBCREG[R7]); // MOV R7, @R0
       emit_2(0x6b, EBCREG[R1]); // PUSH R1
       emit_2(0x6b, EBCREG[R2]); // PUSH R2
       emit_ebc_mov(R1, &inst->src);
