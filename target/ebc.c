@@ -42,10 +42,6 @@ static int EBCREG[] = {
 #define R6 SP
 #define R7 ((Reg)6)
 
-static void emit_le32(uint32_t a) {
-  emit_le(a);
-}
-
 static void emit_ebc_mov_reg(Reg dst, Reg src) {
   // MOVqq R_1, R_2
   emit_2(0x28, (EBCREG[src] << 4) + EBCREG[dst]);
@@ -54,7 +50,7 @@ static void emit_ebc_mov_reg(Reg dst, Reg src) {
 static void emit_ebc_mov_imm(Reg dst, int src) {
   // MOVIdd R_1, IMM32
   emit_2(0xb7, 0x20 + EBCREG[dst]);
-  emit_le32(src);
+  emit_le(src);
 }
 
 static void emit_ebc_mov(Reg dst, Value* src) {
@@ -118,7 +114,7 @@ static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
     emit_2(0x6b, EBCREG[R2]); // PUSH64 R2
     // MOVREL R1, rodata
     emit_2(0xb9, EBCREG[R1]);
-    emit_le32(rodata.vaddr - (text.vaddr + emit_cnt() + 4));
+    emit_le(rodata.vaddr - (text.vaddr + emit_cnt() + 4));
     emit_ebc_mov_imm(R2, 0x04);
     emit_2(0x4e, (EBCREG[R2] << 4) + EBCREG[R7]); // MUL64 R7, R2
     emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
@@ -162,7 +158,7 @@ static void init_state_ebc(Data* data) {
       emit_2(0x4c, 0x17); // ADD64 R7, R1
       // MOVIqw @R7, data->v
       emit_2(0xb7, 0x3f);
-      emit_le32(data->v);
+      emit_le(data->v);
     }
   }
 
@@ -388,7 +384,7 @@ void target_ebc(Module* module) {
   }
 
   for (int i = 0; i < pc_cnt; i++) {
-    emit_le32(pc2addr[i]);
+    emit_le(pc2addr[i]);
   }
   // padding
   for (int i = 0; i < (int)(rodata.rsize - rodata.vsize); i++) {
