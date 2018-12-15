@@ -122,7 +122,7 @@ static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
     emit_ebc_mov_imm(R2, 0x04);
     emit_2(0x4e, (EBCREG[R2] << 4) + EBCREG[R7]); // MUL64 R7, R2
     emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
-    emit_2(0x28, 0x80 + (EBCREG[R7] << 4) + EBCREG[R7]); // MOVqq R7, @R7
+    emit_2(0x23, 0x80 + (EBCREG[R7] << 4) + EBCREG[R7]); // MOVdd R7, @R7
     emit_2(0x6c, EBCREG[R2]); // POP64 R2
   } else {
     emit_ebc_mov_imm(R7, pc2addr[inst->jmp.imm]);
