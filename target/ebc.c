@@ -107,8 +107,9 @@ static void emit_ebc_setcc(Inst* inst, int cmp, int op) {
 static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
   if (op) {
     emit_ebc_cmp(inst, cmp);
-    if (inst->op == JLT || inst->op == JGT)
+    if (inst->op == JLT || inst->op == JGT) {
       emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
+    }
   }
 
   emit_2(0x6b, EBCREG[R1]); // PUSH R1
@@ -145,7 +146,7 @@ static void init_state_ebc(Data* data) {
   emit_4(0x72, 0xf7, 0x89, 0x21); // MOVnw R7, @R7 (.BootServices)
   emit_4(0x77, 0x31, 0x02, 0x00); // MOVI R1, 0x0002
   emit_6(0xb7, 0x32, 0x00, 0x00, 0x00, 0x04); // MOVI R2, 0x04000000
-  emit_ebc_mov_reg(R3, R0); // MOV R3, R0
+  emit_ebc_mov_reg(R3, R0); // MOV R3, R0 XXX: void **Buffer is R3
   emit_2(0x35, 0x03); // PUSHn32 R3
   emit_2(0x35, 0x02); // PUSHn32 R2
   emit_2(0x35, 0x01); // PUSHn32 R1
