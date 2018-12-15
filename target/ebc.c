@@ -65,14 +65,14 @@ static void emit_ebc_arith_reg(Reg dst, int op, Reg src) {
   emit_ebc_mov_reg(R7, src);
   emit_2(op, (EBCREG[R7] << 4) + EBCREG[dst]);
   emit_ebc_mov_imm(R7, 0xffffff);
-  emit_2(0x14, (EBCREG[R7] << 4) + EBCREG[dst]); // AND
+  emit_2(0x14, (EBCREG[R7] << 4) + EBCREG[dst]); // AND32
 }
 
 static void emit_ebc_arith_imm(Reg dst, int op, int imm) {
   emit_ebc_mov_imm(R7, imm);
   emit_2(op, (EBCREG[R7] << 4) + EBCREG[dst]);
   emit_ebc_mov_imm(R7, 0xffffff);
-  emit_2(0x14, (EBCREG[R7] << 4) + EBCREG[dst]); // AND
+  emit_2(0x14, (EBCREG[R7] << 4) + EBCREG[dst]); // AND32
 }
 
 static void emit_ebc_arith(Inst* inst, int op) {
@@ -177,11 +177,11 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case ADD:
-      emit_ebc_arith(inst, 0x0c);
+      emit_ebc_arith(inst, 0x0c); // ADD32
       break;
 
     case SUB:
-      emit_ebc_arith(inst, 0x0d);
+      emit_ebc_arith(inst, 0x0d); // SUB32
       break;
 
     case LOAD:
