@@ -156,8 +156,8 @@ static void init_state_ebc(Data* data) {
       emit_ebc_mov_imm(R2, mp);
       emit_2(0x4e, 0x21); // MUL64 R1, R2
       emit_2(0x4c, 0x17); // ADD64 R7, R1
-      // MOVIqw @R7, data->v
-      emit_2(0xb7, 0x3f);
+      // MOVIdd @R7, data->v
+      emit_2(0xb7, 0x2f);
       emit_le(data->v);
     }
   }
