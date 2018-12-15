@@ -95,7 +95,7 @@ static void emit_ebc_cmp(Inst* inst, int cmp) {
 static void emit_ebc_setcc(Inst* inst, int cmp, int op) {
   emit_ebc_cmp(inst, cmp);
   if (inst->op == LT || inst->op == GT) {
-    emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
+    emit_2(0x6c, EBCREG[inst->dst.reg]); // POP64 inst->dst.reg
   }
   emit_2(op, 0x04); // JMP8cc .L1
   emit_ebc_mov_imm(inst->dst.reg, 0x01);
@@ -108,14 +108,14 @@ static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
   if (op) {
     emit_ebc_cmp(inst, cmp);
     if (inst->op == JLT || inst->op == JGT) {
-      emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
+      emit_2(0x6c, EBCREG[inst->dst.reg]); // POP64 inst->dst.reg
     }
   }
 
-  emit_2(0x6b, EBCREG[R1]); // PUSH R1
+  emit_2(0x6b, EBCREG[R1]); // PUSH64 R1
   if (inst->jmp.type == REG) {
     emit_ebc_mov_reg(R7, inst->jmp.reg);
-    emit_2(0x6b, EBCREG[R2]); // PUSH R2
+    emit_2(0x6b, EBCREG[R2]); // PUSH64 R2
     // MOVREL R1, rodata
     emit_2(0xb9, EBCREG[R1]);
     emit_le32(rodata.vaddr - (text.vaddr + emit_cnt() + 4));
@@ -123,24 +123,24 @@ static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
     emit_2(0x4e, (EBCREG[R2] << 4) + EBCREG[R7]); // MUL64 R7, R2
     emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
     emit_2(0x1e, 0x80 + (EBCREG[R7] << 4) + EBCREG[R7]); // MOVww R7, @R7
-    emit_2(0x6c, EBCREG[R2]); // POP R2
+    emit_2(0x6c, EBCREG[R2]); // POP64 R2
   } else {
     emit_ebc_mov_imm(R7, pc2addr[inst->jmp.imm]);
   }
   // MOVdw R1, @R0(0, +18)
   emit_4(0x5f, 0x80 + (EBCREG[R0] << 4) + EBCREG[R1], 0x10, 0x00);
   emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
-  emit_2(0x6c, EBCREG[R1]); // POP R1
+  emit_2(0x6c, EBCREG[R1]); // POP64 R1
   emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
 }
 
 static void init_state_ebc(Data* data) {
   // XXX: PUSH text_vaddr
   emit_2(0x2a, (0x01 << 4) + EBCREG[R7]); // STORE R7, IP
-  emit_2(0x6b, EBCREG[R7]); // PUSH R7
+  emit_2(0x6b, EBCREG[R7]); // PUSH64 R7
 
   emit_ebc_mov_imm(R7, 0x00);
-  emit_2(0x6b, EBCREG[R7]); // PUSH Buffer
+  emit_2(0x6b, EBCREG[R7]); // PUSH64 Buffer
   emit_4(0x60, 0x07, 0x10, 0x00); // MOVqw R7, R0 (0, +16);
   emit_4(0x72, 0xf7, 0x41, 0x10); // MOVnw R7, @R7 (.SystemTable)
   emit_4(0x72, 0xf7, 0x89, 0x21); // MOVnw R7, @R7 (.BootServices)
@@ -155,12 +155,12 @@ static void init_state_ebc(Data* data) {
 
   for (int mp = 0; data; data = data->next, mp++) {
     if (data->v) {
-      emit_2(0x20, 0x87); // MOV R7, @R0
+      emit_2(0x20, 0x87); // MOVqw R7, @R0
       emit_ebc_mov_imm(R1, 0x04);
       emit_ebc_mov_imm(R2, mp);
       emit_2(0x4e, 0x21); // MUL64 R1, R2
       emit_2(0x4c, 0x17); // ADD64 R7, R1
-      // MOVI @R7, data->v
+      // MOVIqw @R7, data->v
       emit_2(0xb7, 0x3f);
       emit_le32(data->v);
     }
@@ -190,15 +190,15 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
 
     case LOAD:
     case STORE:
-      emit_2(0x28, 0x80 + (EBCREG[R0] << 4) + EBCREG[R7]); // MOV R7, @R0
-      emit_2(0x6b, EBCREG[R1]); // PUSH R1
-      emit_2(0x6b, EBCREG[R2]); // PUSH R2
+      emit_2(0x28, 0x80 + (EBCREG[R0] << 4) + EBCREG[R7]); // MOVqq R7, @R0
+      emit_2(0x6b, EBCREG[R1]); // PUSH64 R1
+      emit_2(0x6b, EBCREG[R2]); // PUSH64 R2
       emit_ebc_mov(R1, &inst->src);
       emit_ebc_mov_imm(R2, 0x04); // MOVIdd R2, 0x04
       emit_2(0x4e, (EBCREG[R2] << 4) + EBCREG[R1]); // MUL64 R1, R2
       emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
-      emit_2(0x6c, EBCREG[R2]); // POP R2
-      emit_2(0x6c, EBCREG[R1]); // POP R1
+      emit_2(0x6c, EBCREG[R2]); // POP64 R2
+      emit_2(0x6c, EBCREG[R1]); // POP64 R1
       if (inst->op == LOAD) {
         // MOVdd inst->dst.reg, @R7
         emit_2(0x23, 0x80 + (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]);
@@ -210,11 +210,11 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
 
 
     case PUTC:
-      emit_2(0x6b, EBCREG[R1]); // PUSH R1
-      emit_2(0x6b, EBCREG[R2]); // PUSH R2
+      emit_2(0x6b, EBCREG[R1]); // PUSH64 R1
+      emit_2(0x6b, EBCREG[R2]); // PUSH64 R2
       emit_ebc_mov(R7, &inst->src);
       emit_ebc_mov_imm(R2, 0x0000);
-      emit_2(0x6b, EBCREG[R2]); // PUSH R2; String
+      emit_2(0x6b, EBCREG[R2]); // PUSH64 R2; String
       emit_ebc_mov_reg(R2, R0);
       // MOVww @R2, R7
       emit_2(0x1e, (EBCREG[R7] << 4) + 0x08 + EBCREG[R2]);
@@ -229,16 +229,16 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_2(0x35, 0x01); // PUSHn R1
       emit_6(0x83, 0x29, 0x01, 0x00, 0x00, 0x10); // CALLEX @R1(.OutputString)
       emit_4(0x60, 0x00, 0x02, 0x10); // MOV R0, R0(+2, 0)
-      emit_2(0x6c, EBCREG[R2]); // POP R2; String
-      emit_2(0x6c, EBCREG[R2]); // POP R2
-      emit_2(0x6c, EBCREG[R1]); // POP R1
+      emit_2(0x6c, EBCREG[R2]); // POP64 R2; String
+      emit_2(0x6c, EBCREG[R2]); // POP64 R2
+      emit_2(0x6c, EBCREG[R1]); // POP64 R1
       break;
 
     case GETC:
-      emit_2(0x6b, EBCREG[R1]); // PUSH R1
-      emit_2(0x6b, EBCREG[R2]); // PUSH R2
+      emit_2(0x6b, EBCREG[R1]); // PUSH64 R1
+      emit_2(0x6b, EBCREG[R2]); // PUSH64 R2
       emit_ebc_mov_imm(R2, 0x0000);
-      emit_2(0x6b, EBCREG[R2]); // PUSH R2; Key
+      emit_2(0x6b, EBCREG[R2]); // PUSH64 R2; Key
       emit_ebc_mov_reg(R2, R0);
       emit_4(0x60, 0x07, 0x28, 0x00); // MOVqw R7, R0 (0, +40)
       emit_4(0x72, 0xf1, 0x41, 0x10); // MOVn R1, @R7(.SystemTable)
@@ -248,15 +248,15 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_6(0x83, 0x29, 0x01, 0x00, 0x00, 0x10); // CALLEX @R1(.ReadKeyStroke)
       emit_4(0x60, 0x00, 0x02, 0x10); // MOV R0, R0(+2, 0)
       emit_4(0x60, 0xa7, 0x04, 0x00); // MOV R7, @R2(0, +2)
-      emit_2(0x6c, EBCREG[R2]); // POP R2; Key
-      emit_2(0x6c, EBCREG[R2]); // POP R2
-      emit_2(0x6c, EBCREG[R1]); // POP R1
+      emit_2(0x6c, EBCREG[R2]); // POP64 R2; Key
+      emit_2(0x6c, EBCREG[R2]); // POP64 R2
+      emit_2(0x6c, EBCREG[R1]); // POP64 R1
       emit_ebc_mov_reg(inst->dst.reg, R7);
       break;
 
     case EXIT:
-      emit_2(0x6c, EBCREG[R7]); // POP Buffer
-      emit_2(0x6c, EBCREG[R7]); // POP text_vaddr
+      emit_2(0x6c, EBCREG[R7]); // POP64 Buffer
+      emit_2(0x6c, EBCREG[R7]); // POP64 text_vaddr
       emit_2(0x04, 0x00); // RET
       break;
 
@@ -273,14 +273,14 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
 
     case LT:
       // dst < src; dst + 1 <= src
-      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH inst->dst.reg
+      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH64 inst->dst.reg
       emit_ebc_arith_imm(inst->dst.reg, 0x0c, 0x01); // INC inst->dst.reg
       emit_ebc_setcc(inst, 0x08, 0x82);
       break;
 
     case GT:
       // dst > src; dst - 1 >= src
-      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH inst->dst.reg
+      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH64 inst->dst.reg
       emit_ebc_arith_imm(inst->dst.reg, 0x0d, 0x01); // DEC inst->dst.reg
       emit_ebc_setcc(inst, 0x09, 0x82);
       break;
@@ -303,14 +303,14 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
 
     case JLT:
       // dst < src; dst + 1 <= src
-      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH inst->dst.reg
+      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH64 inst->dst.reg
       emit_ebc_arith_imm(inst->dst.reg, 0x0c, 0x01); // INC inst->dst.reg
       emit_ebc_jcc(inst, 0x08, 0xc0, pc2addr);
       break;
 
     case JGT:
       // dst > src; dst - 1 >= src
-      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH inst->dst.reg
+      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH64 inst->dst.reg
       emit_ebc_arith_imm(inst->dst.reg, 0x0d, 0x01); // DEC inst->dst.reg
       emit_ebc_jcc(inst, 0x09, 0xc0, pc2addr);
       break;
