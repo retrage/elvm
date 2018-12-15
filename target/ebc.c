@@ -204,7 +204,6 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       }
       break;
 
-
     case PUTC:
       emit_2(0x6b, EBCREG[R1]); // PUSH64 R1
       emit_2(0x6b, EBCREG[R2]); // PUSH64 R2
