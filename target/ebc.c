@@ -94,6 +94,9 @@ static void emit_ebc_cmp(Inst* inst, int cmp) {
 
 static void emit_ebc_setcc(Inst* inst, int cmp, int op) {
   emit_ebc_cmp(inst, cmp);
+  if (inst->op == LT || inst->op == GT) {
+    emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
+  }
   emit_2(op, 0x04); // JMP8cc .L1
   emit_ebc_mov_imm(inst->dst.reg, 0x01);
   emit_2(0x02, 0x04); // JMP8 .L2
@@ -272,7 +275,6 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH inst->dst.reg
       emit_ebc_arith_imm(inst->dst.reg, 0x0c, 0x01); // INC inst->dst.reg
       emit_ebc_setcc(inst, 0x08, 0x82);
-      emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
       break;
 
     case GT:
@@ -280,7 +282,6 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH inst->dst.reg
       emit_ebc_arith_imm(inst->dst.reg, 0x0d, 0x01); // DEC inst->dst.reg
       emit_ebc_setcc(inst, 0x09, 0x82);
-      emit_2(0x6c, EBCREG[inst->dst.reg]); // POP inst->dst.reg
       break;
 
     case LE:
