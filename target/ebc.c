@@ -93,7 +93,7 @@ static void emit_ebc_setcc(Inst* inst, int cmp, int op) {
   if (inst->op == LT || inst->op == GT) {
     emit_2(0x82, 0x06); // JMPcc .L1
     emit_2(0x05, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]); // CMPeq
-    emit_2(0x82, 0x04); // JMP8cc .L1
+    emit_2(0xc2, 0x04); // JMP8cs .L1
   } else {
     emit_2(op, 0x04); // JMP8[cc/cs] .L1
   }
