@@ -110,10 +110,17 @@ static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
   if (op) {
     emit_ebc_cmp(inst, cmp);
     if (inst->op == JLT || inst->op == JGT) {
-      emit_2(0x6c, EBCREG[inst->dst.reg]); // POP64 inst->dst.reg
+      emit_2(0x82, inst->jmp.type == REG ? 0x13 : 0x0b); // JMP8cc .L1
+      emit_2(0x05, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]); // CMPeq
+      emit_2(0xc2, inst->jmp.type == REG ? 0x11 : 0x09); // JMP8cs .L1
+    } else {
+      emit_2(op, inst->jmp.type == REG ? 0x11 : 0x09); // JMP8[cc/cs] .L1
     }
+  } else {
+    emit_2(0x02, 0x00); // JMP8 .L0
   }
 
+  // .L0
   emit_2(0x6b, EBCREG[R1]); // PUSH64 R1
   if (inst->jmp.type == REG) {
     emit_ebc_mov_reg(R7, inst->jmp.reg);
@@ -133,7 +140,8 @@ static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
   emit_4(0x60, 0x80 + (EBCREG[R0] << 4) + EBCREG[R1], 0x10, 0x00);
   emit_2(0x4c, (EBCREG[R1] << 4) + EBCREG[R7]); // ADD64 R7, R1
   emit_2(0x6c, EBCREG[R1]); // POP64 R1
-  emit_2(0x01, op + EBCREG[R7]); // JMP32 R7
+  emit_2(0x01, EBCREG[R7]); // JMP32 R7
+  // .L1:
 }
 
 static void init_state_ebc(Data* data) {
@@ -289,33 +297,27 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       break;
 
     case JEQ:
-      emit_ebc_jcc(inst, 0x05, 0xc0, pc2addr);
+      emit_ebc_jcc(inst, 0x05, 0x82, pc2addr);
       break;
 
     case JNE:
-      emit_ebc_jcc(inst, 0x05, 0x80, pc2addr);
+      emit_ebc_jcc(inst, 0x05, 0xc2, pc2addr);
       break;
 
     case JLT:
-      // dst < src; dst + 1 <= src
-      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH64 inst->dst.reg
-      emit_ebc_arith_imm(inst->dst.reg, 0x0c, 0x01); // INC inst->dst.reg
-      emit_ebc_jcc(inst, 0x08, 0xc0, pc2addr);
+      emit_ebc_jcc(inst, 0x08, 0x82, pc2addr);
       break;
 
     case JGT:
-      // dst > src; dst - 1 >= src
-      emit_2(0x6b, EBCREG[inst->dst.reg]); // PUSH64 inst->dst.reg
-      emit_ebc_arith_imm(inst->dst.reg, 0x0d, 0x01); // DEC inst->dst.reg
-      emit_ebc_jcc(inst, 0x09, 0xc0, pc2addr);
+      emit_ebc_jcc(inst, 0x09, 0x82, pc2addr);
       break;
 
     case JLE:
-      emit_ebc_jcc(inst, 0x08, 0xc0, pc2addr);
+      emit_ebc_jcc(inst, 0x08, 0x82, pc2addr);
       break;
 
     case JGE:
-      emit_ebc_jcc(inst, 0x09, 0xc0, pc2addr);
+      emit_ebc_jcc(inst, 0x09, 0x82, pc2addr);
       break;
 
     case JMP:
