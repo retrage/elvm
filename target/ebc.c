@@ -91,16 +91,19 @@ static void emit_ebc_cmp(Inst* inst, int cmp) {
 static void emit_ebc_setcc(Inst* inst, int cmp, int op) {
   emit_ebc_cmp(inst, cmp);
   if (inst->op == LT || inst->op == GT) {
-    emit_2(0x82, 0x06); // JMPcc .L1
+    emit_2(0x82, 0x06); // JMP8cc .L1
     emit_2(0x05, (EBCREG[R7] << 4) + EBCREG[inst->dst.reg]); // CMPeq
     emit_2(0xc2, 0x04); // JMP8cs .L1
   } else {
     emit_2(op, 0x04); // JMP8[cc/cs] .L1
   }
+  // .L0:
   emit_ebc_mov_imm(inst->dst.reg, 0x01);
   emit_2(0x02, 0x04); // JMP8 .L2
+  // .L1:
   emit_ebc_mov_imm(inst->dst.reg, 0x00);
   emit_2(0x02, 0x00); // JMP8 .L2
+  // .L2:
 }
 
 static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
