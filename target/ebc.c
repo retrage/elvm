@@ -366,7 +366,9 @@ void target_ebc(Module* module) {
   rodata.rsize = aligned(rodata.vsize, PE_FILE_ALIGN);
   rodata.chars = 0x40000040; // r-- inited
 
-  int imagesz = aligned(rodata.vaddr + rodata.vsize - text.vaddr, PE_SEC_ALIGN);
+  int imagesz = PE_SEC_ALIGN;
+  imagesz += aligned(text.vsize, PE_SEC_ALIGN);
+  imagesz += aligned(rodata.vsize, PE_SEC_ALIGN);
 
   // generate PE header
   emit_headers(imagesz);
