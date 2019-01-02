@@ -147,6 +147,8 @@ static void emit_ebc_jcc(Inst* inst, int cmp, int op, int* pc2addr) {
 static void init_state_ebc(Data* data) {
   // XXX: PUSH text_vaddr
   emit_2(0x2a, (0x01 << 4) + EBCREG[R7]); // STORE R7, IP
+  emit_ebc_mov_imm(R1, 0x02);
+  emit_2(0x4d, 0x17); // SUB R7, R1
   emit_2(0x6b, EBCREG[R7]); // PUSH64 R7
 
   emit_ebc_mov_imm(R7, 0x00);
