@@ -224,15 +224,11 @@ static void ebc_emit_inst(Inst* inst, int* pc2addr) {
       emit_2(0x6b, EBCREG[R1]); // PUSH64 R1
       emit_2(0x6b, EBCREG[R2]); // PUSH64 R2
       emit_ebc_mov(R7, &inst->src);
-      emit_ebc_mov_imm(R2, 0x0000);
+      emit_ebc_mov_imm(R2, 0xff00);
       emit_2(0x6b, EBCREG[R2]); // PUSH64 R2; String
       emit_ebc_mov_reg(R2, R0);
-      // MOVww @R2, R7
-      emit_2(0x1e, (EBCREG[R7] << 4) + 0x08 + EBCREG[R2]);
-      // MOVIww @R2(+2, 0), 0xffff
-      emit_2(0x77, 0x50 + 0x08 + EBCREG[R2]);
-      emit_2(0x02, 0x00);
-      emit_2(0xff, 0xff);
+      // MOVbw @R2, R7
+      emit_2(0x1d, (EBCREG[R7] << 4) + 0x08 + EBCREG[R2]);
       emit_4(0x60, 0x07, 0x28, 0x00); // MOVqw R7, R0 (0, +40)
       emit_4(0x72, 0xf1, 0x41, 0x10); // MOVn R1, @R7(.SystemTable)
       emit_4(0x72, 0x91, 0x85, 0x21); // MOVn R1, @R1(.ConOut)
